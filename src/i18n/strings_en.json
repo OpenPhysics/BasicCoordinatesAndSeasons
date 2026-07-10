@@ -1,0 +1,47 @@
+{
+  "title": "Basic Coordinates and Seasons",
+  "screens": {
+    "terrestrial": "Terrestrial Coordinates",
+    "celestial": "Celestial Coordinates",
+    "seasons": "Seasons"
+  },
+  "a11y": {
+    "terrestrial": {
+      "screenSummary": {
+        "playArea": "The play area shows a flat map and a globe for exploring longitude and latitude on Earth.",
+        "controlArea": "The control area has a Reset All button that returns the screen to its starting state.",
+        "interactionHint": "Explore the screen by interacting with its controls."
+      },
+      "currentDetails": "The screen is in its initial state.",
+      "controls": {
+        "exampleControl": "Example control"
+      }
+    },
+    "celestial": {
+      "screenSummary": {
+        "playArea": "The play area shows a flat sky map and a celestial sphere for exploring right ascension and declination.",
+        "controlArea": "The control area has a Reset All button that returns the screen to its starting state.",
+        "interactionHint": "Explore the screen by interacting with its controls."
+      },
+      "currentDetails": "The screen is in its initial state.",
+      "controls": {
+        "exampleControl": "Example control"
+      }
+    },
+    "seasons": {
+      "screenSummary": {
+        "playArea": "The play area shows Earth orbiting the Sun, the ecliptic, and how axial tilt produces the seasons.",
+        "controlArea": "The control area has a Reset All button that returns the screen to its starting state.",
+        "interactionHint": "Explore the screen by interacting with its controls."
+      },
+      "currentDetails": "The screen is in its initial state.",
+      "controls": {
+        "exampleControl": "Example control"
+      }
+    }
+  },
+  "preferences": {
+    "title": "Simulation",
+    "exampleToggle": "Example Toggle"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "title": "Coordenadas básicas y estaciones",
+  "screens": {
+    "terrestrial": "Coordenadas terrestres",
+    "celestial": "Coordenadas celestes",
+    "seasons": "Estaciones"
+  },
+  "a11y": {
+    "terrestrial": {
+      "screenSummary": {
+        "playArea": "El área de juego muestra un mapa plano y un globo para explorar la longitud y la latitud en la Tierra.",
+        "controlArea": "El área de control tiene un botón Restablecer todo que devuelve la pantalla a su estado inicial.",
+        "interactionHint": "Explora la pantalla interactuando con sus controles."
+      },
+      "currentDetails": "La pantalla está en su estado inicial.",
+      "controls": {
+        "exampleControl": "Control de ejemplo"
+      }
+    },
+    "celestial": {
+      "screenSummary": {
+        "playArea": "El área de juego muestra un mapa plano del cielo y una esfera celeste para explorar la ascensión recta y la declinación.",
+        "controlArea": "El área de control tiene un botón Restablecer todo que devuelve la pantalla a su estado inicial.",
+        "interactionHint": "Explora la pantalla interactuando con sus controles."
+      },
+      "currentDetails": "La pantalla está en su estado inicial.",
+      "controls": {
+        "exampleControl": "Control de ejemplo"
+      }
+    },
+    "seasons": {
+      "screenSummary": {
+        "playArea": "El área de juego muestra la Tierra orbitando el Sol, la eclíptica y cómo la inclinación del eje produce las estaciones.",
+        "controlArea": "El área de control tiene un botón Restablecer todo que devuelve la pantalla a su estado inicial.",
+        "interactionHint": "Explora la pantalla interactuando con sus controles."
+      },
+      "currentDetails": "La pantalla está en su estado inicial.",
+      "controls": {
+        "exampleControl": "Control de ejemplo"
+      }
+    }
+  },
+  "preferences": {
+    "title": "Simulación",
+    "exampleToggle": "Ejemplo de alternancia"
+  }
+}

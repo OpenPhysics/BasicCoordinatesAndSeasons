@@ -8,13 +8,14 @@
   "a11y": {
     "terrestrial": {
       "screenSummary": {
-        "playArea": "El área de juego muestra un mapa plano y un globo para explorar la longitud y la latitud en la Tierra.",
-        "controlArea": "El área de control tiene un botón Restablecer todo que devuelve la pantalla a su estado inicial.",
-        "interactionHint": "Explora la pantalla interactuando con sus controles."
+        "playArea": "El área de juego muestra un mapa plano de la Tierra y un globo. Un marcador de observador arrastrable establece una latitud y longitud, mostradas en ambos.",
+        "controlArea": "El área de control tiene campos de latitud y longitud, un interruptor de círculos de referencia y un botón Restablecer todo.",
+        "interactionHint": "Arrastra el observador en el mapa o el globo, o escribe una latitud o longitud, para explorar las coordenadas de la Tierra."
       },
       "currentDetails": "La pantalla está en su estado inicial.",
+      "currentDetailsPattern": "El observador está en {{latitude}}, {{longitude}}.",
       "controls": {
-        "exampleControl": "Control de ejemplo"
+        "referenceCircles": "Mostrar los círculos de referencia de los trópicos y polares"
       }
     },
     "celestial": {
@@ -46,7 +47,13 @@
     "rightAscension": "AR",
     "declination": "Dec",
     "rightAscensionLong": "ascensión recta",
-    "declinationLong": "declinación"
+    "declinationLong": "declinación",
+    "observerLocation": "Ubicación del observador",
+    "referenceCircles": "Círculos de referencia",
+    "north": "N",
+    "south": "S",
+    "east": "E",
+    "west": "O"
   },
   "preferences": {
     "title": "Simulación",

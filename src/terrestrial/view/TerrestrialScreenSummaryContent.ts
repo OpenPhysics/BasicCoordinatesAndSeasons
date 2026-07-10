@@ -1,38 +1,38 @@
 /**
  * TerrestrialScreenSummaryContent.ts
  *
- * The accessible screen summary read by screen readers (SceneryStack's
- * Interactive Description). It appears at the top of the parallel DOM and gives
- * a non-visual user a way to orient themselves and to re-read the simulation's
- * current state at any time.
- *
- * A summary has four regions (all optional, but provide at least the first
- * three in every sim for consistency across OpenPhysics):
- *   - playAreaContent       — what the play area contains
- *   - controlAreaContent    — what the controls do
- *   - currentDetailsContent — a LIVE paragraph describing current state
- *   - interactionHintContent — a short hint on how to get started
- *
- * ── Making "current details" live ─────────────────────────────────────────────
- * The template has no model state, so currentDetails is a static string. In a
- * real sim, build a DerivedProperty over the relevant model Properties and pass
- * it as `currentDetailsContent` so the paragraph updates as the sim runs.
- * See LunarLander/src/.../LunarLanderScreenSummaryContent.ts for the pattern.
+ * The accessible screen summary for the Terrestrial Coordinates screen. Its
+ * "current details" region is a live sentence describing the observer's latitude
+ * and longitude, formatted with hemisphere letters (e.g. "40.8° N, 96.7° W").
  */
+
+import { DerivedProperty, PatternStringProperty } from "scenerystack/axon";
 import { ScreenSummaryContent } from "scenerystack/sim";
+import { formatLatitude, formatLongitude } from "../../common/formatAngles.js";
 import { StringManager } from "../../i18n/StringManager.js";
 import type { TerrestrialModel } from "../model/TerrestrialModel.js";
 
 export class TerrestrialScreenSummaryContent extends ScreenSummaryContent {
-  // `model` is unused in the template but kept in the signature so real sims can
-  // derive a live currentDetailsContent from it without changing call sites.
-  public constructor(_model: TerrestrialModel) {
+  public constructor(model: TerrestrialModel) {
     const a11y = StringManager.getInstance().getTerrestrialA11yStrings();
+    const controls = StringManager.getInstance().getControls();
+
+    const latitudeReadout = new DerivedProperty(
+      [model.latitudeProperty, controls.northStringProperty, controls.southStringProperty],
+      (lat, north, south) => formatLatitude(lat, 1, { north, south, east: "", west: "" }),
+    );
+    const longitudeReadout = new DerivedProperty(
+      [model.longitudeProperty, controls.eastStringProperty, controls.westStringProperty],
+      (lon, east, west) => formatLongitude(lon, 1, { north: "", south: "", east, west }),
+    );
 
     super({
       playAreaContent: a11y.screenSummary.playAreaStringProperty,
       controlAreaContent: a11y.screenSummary.controlAreaStringProperty,
-      currentDetailsContent: a11y.currentDetailsStringProperty,
+      currentDetailsContent: new PatternStringProperty(a11y.currentDetailsPatternStringProperty, {
+        latitude: latitudeReadout,
+        longitude: longitudeReadout,
+      }),
       interactionHintContent: a11y.screenSummary.interactionHintStringProperty,
     });
   }

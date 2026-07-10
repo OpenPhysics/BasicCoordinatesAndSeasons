@@ -8,13 +8,14 @@
   "a11y": {
     "terrestrial": {
       "screenSummary": {
-        "playArea": "La zone de jeu affiche une carte plane et un globe pour explorer la longitude et la latitude sur Terre.",
-        "controlArea": "La zone de contrôle comporte un bouton Tout réinitialiser qui ramène l'écran à son état initial.",
-        "interactionHint": "Explorez l'écran en interagissant avec ses commandes."
+        "playArea": "La zone de jeu affiche une carte plane de la Terre et un globe. Un marqueur d'observateur déplaçable définit une latitude et une longitude, affichées sur les deux.",
+        "controlArea": "La zone de contrôle comporte des champs de latitude et de longitude, un interrupteur de cercles de référence et un bouton Tout réinitialiser.",
+        "interactionHint": "Déplacez l'observateur sur la carte ou le globe, ou saisissez une latitude ou une longitude, pour explorer les coordonnées de la Terre."
       },
       "currentDetails": "L'écran est dans son état initial.",
+      "currentDetailsPattern": "L'observateur est à {{latitude}}, {{longitude}}.",
       "controls": {
-        "exampleControl": "Contrôle d'exemple"
+        "referenceCircles": "Afficher les cercles de référence des tropiques et polaires"
       }
     },
     "celestial": {
@@ -46,7 +47,13 @@
     "rightAscension": "AD",
     "declination": "Déc",
     "rightAscensionLong": "ascension droite",
-    "declinationLong": "déclinaison"
+    "declinationLong": "déclinaison",
+    "observerLocation": "Position de l'observateur",
+    "referenceCircles": "Cercles de référence",
+    "north": "N",
+    "south": "S",
+    "east": "E",
+    "west": "O"
   },
   "preferences": {
     "title": "Simulation",

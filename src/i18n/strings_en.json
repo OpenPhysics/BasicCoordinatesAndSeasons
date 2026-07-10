@@ -8,13 +8,14 @@
   "a11y": {
     "terrestrial": {
       "screenSummary": {
-        "playArea": "The play area shows a flat map and a globe for exploring longitude and latitude on Earth.",
-        "controlArea": "The control area has a Reset All button that returns the screen to its starting state.",
-        "interactionHint": "Explore the screen by interacting with its controls."
+        "playArea": "The play area shows a flat map of Earth and a globe. A draggable observer marker sets one latitude and longitude, shown on both.",
+        "controlArea": "The control area has latitude and longitude fields, a reference-circles toggle, and a Reset All button.",
+        "interactionHint": "Drag the observer on the map or globe, or type a latitude or longitude, to explore Earth's coordinates."
       },
       "currentDetails": "The screen is in its initial state.",
+      "currentDetailsPattern": "The observer is at {{latitude}}, {{longitude}}.",
       "controls": {
-        "exampleControl": "Example control"
+        "referenceCircles": "Show the tropic and polar reference circles"
       }
     },
     "celestial": {
@@ -46,7 +47,13 @@
     "rightAscension": "RA",
     "declination": "Dec",
     "rightAscensionLong": "right ascension",
-    "declinationLong": "declination"
+    "declinationLong": "declination",
+    "observerLocation": "Observer's Location",
+    "referenceCircles": "Reference circles",
+    "north": "N",
+    "south": "S",
+    "east": "E",
+    "west": "W"
   },
   "preferences": {
     "title": "Simulation",

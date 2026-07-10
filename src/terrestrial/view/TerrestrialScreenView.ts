@@ -1,82 +1,158 @@
 /**
  * TerrestrialScreenView.ts
  *
- * The top-level view for the simulation screen.
- *
- * All visual nodes are added here. Follow these conventions:
- *   - Use this.layoutBounds for positioning (never magic pixel values)
- *   - Keep a ResetAllButton that calls model.reset() and this.reset()
- *   - Override step(dt) for frame-by-frame animation
- *
- * ── Adding content ────────────────────────────────────────────────────────────
- * 1. Create Node subclasses in separate files (e.g. TerrestrialControlPanel.ts)
- * 2. Instantiate them here and call this.addChild(...)
- * 3. Link them to model properties:
- *      model.isRunningProperty.link( isRunning => { ... } );
- *
- * ── Layout bounds ─────────────────────────────────────────────────────────────
- * SceneryStack uses a virtual 1024×618 coordinate space by default.
- * this.layoutBounds gives you the full rectangle; use it for alignment:
- *   center, minX, maxX, minY, maxY, width, height
+ * The Terrestrial Coordinates screen: a draggable flat map (left) and a full-size
+ * globe (right) that share one observer location, plus a panel with editable
+ * latitude/longitude fields, a hemisphere-letter readout, and a reference-circles
+ * toggle. Dragging the map cursor or the globe marker — or typing a coordinate —
+ * keeps all three in sync.
  */
 
-import { Node, Rectangle, Text } from "scenerystack/scenery";
-import { ResetAllButton } from "scenerystack/scenery-phet";
+import { DerivedProperty, NumberProperty, Property } from "scenerystack/axon";
+import { Vector2 } from "scenerystack/dot";
+import { Node, Rectangle, Text, VBox } from "scenerystack/scenery";
+import { PhetFont, ResetAllButton } from "scenerystack/scenery-phet";
 import type { ScreenViewOptions } from "scenerystack/sim";
 import { ScreenView } from "scenerystack/sim";
+import { Checkbox } from "scenerystack/sun";
 import BasicCoordinatesAndSeasonsColors from "../../BasicCoordinatesAndSeasonsColors.js";
-import { SCREEN_VIEW_MARGIN } from "../../BasicCoordinatesAndSeasonsConstants.js";
+import {
+  CONTROL_FONT_SIZE,
+  DEFAULT_EARTH_MAP_RESOLUTION,
+  type EarthMapResolution,
+  SCREEN_VIEW_MARGIN,
+} from "../../BasicCoordinatesAndSeasonsConstants.js";
 import { FLAT_RESET_ALL_BUTTON_OPTIONS } from "../../common/BasicCoordinatesAndSeasonsButtonOptions.js";
+import { SIM_CHECKBOX_OPTIONS } from "../../common/BasicCoordinatesAndSeasonsControlOptions.js";
+import { BasicCoordinatesAndSeasonsPanel } from "../../common/BasicCoordinatesAndSeasonsPanel.js";
+import { formatLatitude, formatLongitude } from "../../common/formatAngles.js";
+import { SkyProjection } from "../../common/SkyProjection.js";
+import { EarthGlobeNode } from "../../common/view/EarthGlobeNode.js";
+import { EditableNumberFieldNode } from "../../common/view/EditableNumberFieldNode.js";
+import { StringManager } from "../../i18n/StringManager.js";
 import type { TerrestrialModel } from "../model/TerrestrialModel.js";
+import { GlobeObserverDragNode } from "./GlobeObserverDragNode.js";
+import { TerrestrialMapNode } from "./TerrestrialMapNode.js";
 import { TerrestrialScreenSummaryContent } from "./TerrestrialScreenSummaryContent.js";
+
+const MAP_WIDTH = 440;
+const MAP_HEIGHT = 220;
+const GLOBE_RADIUS = 150;
 
 export class TerrestrialScreenView extends ScreenView {
   public constructor(model: TerrestrialModel, options?: ScreenViewOptions) {
-    // ── Accessibility: screen summary ───────────────────────────────────────────
-    // The screen summary is the first thing a screen-reader user encounters. It
-    // is registered here, in the ScreenView's super() options, so every sim wires
-    // it the same way. See TerrestrialScreenSummaryContent for the four content regions.
     super({
       screenSummaryContent: new TerrestrialScreenSummaryContent(model),
       ...options,
     });
 
-    // ── Background ────────────────────────────────────────────────────────────
-    // A full-screen rectangle that follows the active color profile.
-    // Replace or remove once you add real content.
+    const controls = StringManager.getInstance().getControls();
+    const a11y = StringManager.getInstance().getTerrestrialA11yStrings();
+
     const backgroundRect = new Rectangle(0, 0, this.layoutBounds.width, this.layoutBounds.height, {
       fill: BasicCoordinatesAndSeasonsColors.backgroundColorProperty,
     });
     this.addChild(backgroundRect);
 
-    // ── Placeholder label ─────────────────────────────────────────────────────
-    // Replace this with your actual simulation content.
-    const placeholderText = new Text("Terrestrial Coordinates", {
-      font: "bold 36px sans-serif",
-      fill: BasicCoordinatesAndSeasonsColors.textColorProperty,
-      center: this.layoutBounds.center,
+    // Shared display state (not model state): coastline detail and the globe's
+    // fixed sidereal time (0, so longitude alone spins the geography).
+    const earthMapResolutionProperty = new Property<EarthMapResolution>(DEFAULT_EARTH_MAP_RESOLUTION);
+    const siderealTimeProperty = new NumberProperty(0);
+
+    // ── Flat map (left) ──────────────────────────────────────────────────────
+    const mapNode = new TerrestrialMapNode(
+      model.latitudeProperty,
+      model.longitudeProperty,
+      earthMapResolutionProperty,
+      model.referenceCirclesVisibleProperty,
+      { width: MAP_WIDTH, height: MAP_HEIGHT },
+    );
+    mapNode.left = this.layoutBounds.left + SCREEN_VIEW_MARGIN + 10;
+    mapNode.top = this.layoutBounds.top + 80;
+    this.addChild(mapNode);
+
+    // ── Globe (right) ────────────────────────────────────────────────────────
+    const projection = new SkyProjection({
+      center: new Vector2(this.layoutBounds.centerX + 260, this.layoutBounds.top + 220),
+      radius: GLOBE_RADIUS,
+      azimuth: Math.PI / 2, // bring the observer's meridian (RA 0h) to the front
+      elevation: -0.35,
     });
-    this.addChild(placeholderText);
+    const globeNode = new EarthGlobeNode(
+      projection,
+      model.latitudeProperty,
+      model.longitudeProperty,
+      siderealTimeProperty,
+      earthMapResolutionProperty,
+      { radiusRatio: 1 },
+    );
+    const globeDragNode = new GlobeObserverDragNode(projection, model.latitudeProperty, model.longitudeProperty);
+    this.addChild(new Node({ children: [globeNode, globeDragNode] }));
 
-    // ── Accessibility: per-control names ────────────────────────────────────────
-    // EVERY interactive node must carry an `accessibleName` (and an
-    // `accessibleHelpText` where useful), sourced from the StringManager `a11y`
-    // string group — never a hard-coded English literal. Sun/scenery-phet controls
-    // (NumberControl, Checkbox, ComboBox, AquaRadioButtonGroup, …) accept it as an
-    // option; a draggable plain Node needs `tagName: "div", focusable: true` too.
-    // Example (uncomment and adapt when you add a real control):
-    //
-    //   const a11y = StringManager.getInstance().getTerrestrialA11yStrings();
-    //   const exampleButton = new RectangularPushButton({
-    //     ...FLAT_RECTANGULAR_BUTTON_OPTIONS, // flat appearance, not SceneryStack's default 3-D look
-    //     content: someIcon,
-    //     listener: () => model.doSomething(),
-    //     accessibleName: a11y.controls.exampleControlStringProperty,
-    //   });
-    //   this.addChild(exampleButton);
+    // ── Readout / control panel ──────────────────────────────────────────────
+    const titleText = new Text(controls.observerLocationStringProperty, {
+      font: new PhetFont({ size: CONTROL_FONT_SIZE + 2, weight: "bold" }),
+      fill: BasicCoordinatesAndSeasonsColors.textColorProperty,
+    });
 
-    // ── Reset All button ──────────────────────────────────────────────────────
-    // Always position at bottom-right (PhET convention).
+    const latitudeField = new EditableNumberFieldNode({
+      labelProperty: controls.latitudeStringProperty,
+      unit: "°",
+      decimalPlaces: 1,
+      onCommit: (value) => {
+        model.latitudeProperty.value = model.latitudeProperty.range.constrainValue(value);
+      },
+    });
+    model.latitudeProperty.link((value) => latitudeField.setDisplayValue(value));
+
+    const longitudeField = new EditableNumberFieldNode({
+      labelProperty: controls.longitudeStringProperty,
+      unit: "°",
+      decimalPlaces: 1,
+      onCommit: (value) => {
+        model.longitudeProperty.value = model.longitudeProperty.range.constrainValue(value);
+      },
+    });
+    model.longitudeProperty.link((value) => longitudeField.setDisplayValue(value));
+
+    const latitudeReadout = new DerivedProperty(
+      [model.latitudeProperty, controls.northStringProperty, controls.southStringProperty],
+      (lat, north, south) => formatLatitude(lat, 1, { north, south, east: "", west: "" }),
+    );
+    const longitudeReadout = new DerivedProperty(
+      [model.longitudeProperty, controls.eastStringProperty, controls.westStringProperty],
+      (lon, east, west) => formatLongitude(lon, 1, { north: "", south: "", east, west }),
+    );
+    const readoutProperty = new DerivedProperty([latitudeReadout, longitudeReadout], (lat, lon) => `${lat}    ${lon}`);
+    const readoutText = new Text(readoutProperty, {
+      font: new PhetFont(CONTROL_FONT_SIZE),
+      fill: BasicCoordinatesAndSeasonsColors.textColorProperty,
+    });
+
+    const referenceCirclesCheckbox = new Checkbox(
+      model.referenceCirclesVisibleProperty,
+      new Text(controls.referenceCirclesStringProperty, {
+        font: new PhetFont(CONTROL_FONT_SIZE),
+        fill: BasicCoordinatesAndSeasonsColors.textColorProperty,
+      }),
+      {
+        ...SIM_CHECKBOX_OPTIONS,
+        accessibleName: a11y.controls.referenceCirclesStringProperty,
+      },
+    );
+
+    const panel = new BasicCoordinatesAndSeasonsPanel(
+      new VBox({
+        align: "left",
+        spacing: 8,
+        children: [titleText, latitudeField, longitudeField, readoutText, referenceCirclesCheckbox],
+      }),
+    );
+    panel.left = this.layoutBounds.left + SCREEN_VIEW_MARGIN + 10;
+    panel.top = mapNode.bottom + 24;
+    this.addChild(panel);
+
+    // ── Reset All ────────────────────────────────────────────────────────────
     const resetAllButton = new ResetAllButton({
       ...FLAT_RESET_ALL_BUTTON_OPTIONS,
       listener: () => {
@@ -88,35 +164,19 @@ export class TerrestrialScreenView extends ScreenView {
     });
     this.addChild(resetAllButton);
 
-    // ── Accessibility: keyboard / reading traversal order ───────────────────────
-    // Make the parallel DOM (Tab order and screen-reader reading order)
-    // deterministic and independent of child z-order. ScreenView throws if you
-    // set pdomOrder on itself, so add a lightweight wrapper Node that "borrows"
-    // the interactive nodes in the order a user should reach them — Reset All
-    // last. Non-interactive decoration (background, placeholder) is omitted.
+    // ── Keyboard / reading traversal order ───────────────────────────────────
     this.addChild(
       new Node({
-        pdomOrder: [
-          // TODO: add the sim's interactive nodes here, in traversal order
-          resetAllButton,
-        ],
+        pdomOrder: [mapNode.map, latitudeField, longitudeField, referenceCirclesCheckbox, resetAllButton],
       }),
     );
   }
 
-  /**
-   * Resets view-side state (animations, panel visibility, etc.).
-   * Called by the Reset All button listener.
-   */
   public reset(): void {
-    // TODO: reset any view-side state here
+    // Location lives in the model; nothing view-side to reset.
   }
 
-  /**
-   * Steps the view forward by dt seconds for animation.
-   * @param _dt - elapsed time in seconds
-   */
   public override step(_dt: number): void {
-    // TODO: implement animation updates here
+    // Static screen.
   }
 }

@@ -37,13 +37,15 @@
     },
     "seasons": {
       "screenSummary": {
-        "playArea": "El área de juego muestra la Tierra orbitando el Sol, la eclíptica y cómo la inclinación del eje produce las estaciones.",
-        "controlArea": "El área de control tiene un botón Restablecer todo que devuelve la pantalla a su estado inicial.",
-        "interactionHint": "Explora la pantalla interactuando con sus controles."
+        "playArea": "El área de juego muestra la Tierra orbitando el Sol con un eje inclinado fijo, el Sol recorriendo la eclíptica en una esfera celeste, un primer plano de la Tierra con su terminador día/noche y un panel de haz solar.",
+        "controlArea": "El área de control tiene reproducir/pausar, un control de latitud, lecturas de la fecha, la declinación y la ascensión recta del Sol y la altitud del Sol al mediodía, además de interruptores y un botón Restablecer todo.",
+        "interactionHint": "Reproduce la animación o arrastra la Tierra por su órbita, y cambia la latitud, para ver cómo surgen las estaciones."
       },
       "currentDetails": "La pantalla está en su estado inicial.",
+      "currentDetailsPattern": "Es {{date}}. La declinación del Sol es {{declination}} grados; a la latitud {{latitude}} grados la altitud del Sol al mediodía es {{altitude}} grados.",
       "controls": {
-        "exampleControl": "Control de ejemplo"
+        "earth": "La Tierra en su órbita",
+        "earthHelp": "Arrastra la Tierra por su órbita, o usa las teclas de flecha, para cambiar la fecha."
       }
     }
   },
@@ -64,7 +66,32 @@
     "showConstellations": "Constelaciones del zodíaco",
     "showGrid": "Cuadrícula",
     "showCelestialEquator": "Ecuador celeste",
-    "showEcliptic": "Eclíptica"
+    "showEcliptic": "Eclíptica",
+    "date": "Fecha",
+    "sunDeclination": "Declinación del Sol",
+    "sunRightAscension": "Ascensión recta del Sol",
+    "noonSunAltitude": "Altitud del Sol al mediodía",
+    "eclipticLongitude": "Longitud eclíptica",
+    "showSubsolarPoint": "Punto subsolar",
+    "marchEquinox": "Equinoccio de marzo",
+    "juneSolstice": "Solsticio de junio",
+    "septemberEquinox": "Equinoccio de sept.",
+    "decemberSolstice": "Solsticio de dic.",
+    "datePattern": "{{day}} de {{month}}",
+    "months": {
+      "january": "enero",
+      "february": "febrero",
+      "march": "marzo",
+      "april": "abril",
+      "may": "mayo",
+      "june": "junio",
+      "july": "julio",
+      "august": "agosto",
+      "september": "septiembre",
+      "october": "octubre",
+      "november": "noviembre",
+      "december": "diciembre"
+    }
   },
   "preferences": {
     "title": "Simulación",

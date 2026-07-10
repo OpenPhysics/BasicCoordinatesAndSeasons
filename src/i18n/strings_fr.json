@@ -37,13 +37,15 @@
     },
     "seasons": {
       "screenSummary": {
-        "playArea": "La zone de jeu montre la Terre en orbite autour du Soleil, l'écliptique et comment l'inclinaison de l'axe produit les saisons.",
-        "controlArea": "La zone de contrôle comporte un bouton Tout réinitialiser qui ramène l'écran à son état initial.",
-        "interactionHint": "Explorez l'écran en interagissant avec ses commandes."
+        "playArea": "La zone de jeu montre la Terre en orbite autour du Soleil avec un axe incliné fixe, le Soleil parcourant l'écliptique sur une sphère céleste, un gros plan de la Terre avec son terminateur jour/nuit et un panneau de faisceau solaire.",
+        "controlArea": "La zone de contrôle comporte lecture/pause, une commande de latitude, des affichages de la date, de la déclinaison et de l'ascension droite du Soleil et de la hauteur du Soleil à midi, ainsi que des interrupteurs et un bouton Tout réinitialiser.",
+        "interactionHint": "Lancez l'animation ou déplacez la Terre sur son orbite, et changez la latitude, pour voir comment naissent les saisons."
       },
       "currentDetails": "L'écran est dans son état initial.",
+      "currentDetailsPattern": "Nous sommes le {{date}}. La déclinaison du Soleil est de {{declination}} degrés ; à la latitude {{latitude}} degrés, la hauteur du Soleil à midi est de {{altitude}} degrés.",
       "controls": {
-        "exampleControl": "Contrôle d'exemple"
+        "earth": "La Terre sur son orbite",
+        "earthHelp": "Déplacez la Terre sur son orbite, ou utilisez les touches fléchées, pour changer la date."
       }
     }
   },
@@ -64,7 +66,32 @@
     "showConstellations": "Constellations du zodiaque",
     "showGrid": "Grille",
     "showCelestialEquator": "Équateur céleste",
-    "showEcliptic": "Écliptique"
+    "showEcliptic": "Écliptique",
+    "date": "Date",
+    "sunDeclination": "Déclinaison du Soleil",
+    "sunRightAscension": "Ascension droite du Soleil",
+    "noonSunAltitude": "Hauteur du Soleil à midi",
+    "eclipticLongitude": "Longitude écliptique",
+    "showSubsolarPoint": "Point subsolaire",
+    "marchEquinox": "Équinoxe de mars",
+    "juneSolstice": "Solstice de juin",
+    "septemberEquinox": "Équinoxe de sept.",
+    "decemberSolstice": "Solstice de déc.",
+    "datePattern": "{{day}} {{month}}",
+    "months": {
+      "january": "janvier",
+      "february": "février",
+      "march": "mars",
+      "april": "avril",
+      "may": "mai",
+      "june": "juin",
+      "july": "juillet",
+      "august": "août",
+      "september": "septembre",
+      "october": "octobre",
+      "november": "novembre",
+      "december": "décembre"
+    }
   },
   "preferences": {
     "title": "Simulation",

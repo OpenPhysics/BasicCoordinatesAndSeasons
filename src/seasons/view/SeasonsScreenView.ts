@@ -1,122 +1,225 @@
 /**
  * SeasonsScreenView.ts
  *
- * The top-level view for the simulation screen.
- *
- * All visual nodes are added here. Follow these conventions:
- *   - Use this.layoutBounds for positioning (never magic pixel values)
- *   - Keep a ResetAllButton that calls model.reset() and this.reset()
- *   - Override step(dt) for frame-by-frame animation
- *
- * ── Adding content ────────────────────────────────────────────────────────────
- * 1. Create Node subclasses in separate files (e.g. SeasonsControlPanel.ts)
- * 2. Instantiate them here and call this.addChild(...)
- * 3. Link them to model properties:
- *      model.isRunningProperty.link( isRunning => { ... } );
- *
- * ── Layout bounds ─────────────────────────────────────────────────────────────
- * SceneryStack uses a virtual 1024×618 coordinate space by default.
- * this.layoutBounds gives you the full rectangle; use it for alignment:
- *   center, minX, maxX, minY, maxY, width, height
+ * The Seasons screen: an orbit view (Sun-centred, draggable Earth with a fixed
+ * tilted axis), a celestial sphere with the Sun on the ecliptic, an Earth
+ * close-up with the day/night terminator, and a sunbeam angle-of-incidence panel,
+ * plus play/pause, a latitude control, live readouts (date, λ☉, δ☉, α☉, noon Sun
+ * altitude), and visibility toggles.
  */
 
-import { Node, Rectangle, Text } from "scenerystack/scenery";
-import { ResetAllButton } from "scenerystack/scenery-phet";
+import { DerivedProperty, type TReadOnlyProperty } from "scenerystack/axon";
+import { toFixed, Vector2 } from "scenerystack/dot";
+import { HBox, Node, Rectangle, Text, VBox } from "scenerystack/scenery";
+import { NumberControl, PhetFont, ResetAllButton, TimeControlNode } from "scenerystack/scenery-phet";
 import type { ScreenViewOptions } from "scenerystack/sim";
 import { ScreenView } from "scenerystack/sim";
+import { Checkbox } from "scenerystack/sun";
 import BasicCoordinatesAndSeasonsColors from "../../BasicCoordinatesAndSeasonsColors.js";
-import { SCREEN_VIEW_MARGIN } from "../../BasicCoordinatesAndSeasonsConstants.js";
-import { FLAT_RESET_ALL_BUTTON_OPTIONS } from "../../common/BasicCoordinatesAndSeasonsButtonOptions.js";
+import { CONTROL_FONT_SIZE, SCREEN_VIEW_MARGIN, SPHERE_RADIUS } from "../../BasicCoordinatesAndSeasonsConstants.js";
+import {
+  FLAT_BUTTON_APPEARANCE_OPTIONS,
+  FLAT_PLAY_PAUSE_STEP_BUTTON_OPTIONS,
+  FLAT_RESET_ALL_BUTTON_OPTIONS,
+} from "../../common/BasicCoordinatesAndSeasonsButtonOptions.js";
+import {
+  SIM_CHECKBOX_OPTIONS,
+  SIM_NUMBER_CONTROL_OPTIONS,
+} from "../../common/BasicCoordinatesAndSeasonsControlOptions.js";
+import { BasicCoordinatesAndSeasonsPanel } from "../../common/BasicCoordinatesAndSeasonsPanel.js";
+import { SkyProjection } from "../../common/SkyProjection.js";
+import { attachSkyCameraInteraction } from "../../common/view/attachSkyCameraInteraction.js";
+import { StringManager } from "../../i18n/StringManager.js";
 import type { SeasonsModel } from "../model/SeasonsModel.js";
+import { EarthCloseUpNode } from "./EarthCloseUpNode.js";
+import { OrbitViewNode } from "./OrbitViewNode.js";
 import { SeasonsScreenSummaryContent } from "./SeasonsScreenSummaryContent.js";
+import { SeasonsSphereNode } from "./SeasonsSphereNode.js";
+import { SunbeamSpreadNode } from "./SunbeamSpreadNode.js";
+import { createSeasonsDateProperty } from "./seasonsDate.js";
 
 export class SeasonsScreenView extends ScreenView {
   public constructor(model: SeasonsModel, options?: ScreenViewOptions) {
-    // ── Accessibility: screen summary ───────────────────────────────────────────
-    // The screen summary is the first thing a screen-reader user encounters. It
-    // is registered here, in the ScreenView's super() options, so every sim wires
-    // it the same way. See SeasonsScreenSummaryContent for the four content regions.
     super({
       screenSummaryContent: new SeasonsScreenSummaryContent(model),
       ...options,
     });
 
-    // ── Background ────────────────────────────────────────────────────────────
-    // A full-screen rectangle that follows the active color profile.
-    // Replace or remove once you add real content.
-    const backgroundRect = new Rectangle(0, 0, this.layoutBounds.width, this.layoutBounds.height, {
-      fill: BasicCoordinatesAndSeasonsColors.backgroundColorProperty,
+    const controls = StringManager.getInstance().getControls();
+    const a11y = StringManager.getInstance().getSeasonsA11yStrings();
+    const font = new PhetFont(CONTROL_FONT_SIZE);
+    const textColor = BasicCoordinatesAndSeasonsColors.textColorProperty;
+
+    this.addChild(
+      new Rectangle(0, 0, this.layoutBounds.width, this.layoutBounds.height, {
+        fill: BasicCoordinatesAndSeasonsColors.backgroundColorProperty,
+      }),
+    );
+
+    // ── Orbit view (top-left) ────────────────────────────────────────────────
+    const orbitView = new OrbitViewNode(model, {
+      radius: 128,
+      accessibleName: a11y.controls.earthStringProperty,
+      accessibleHelpText: a11y.controls.earthHelpStringProperty,
+      seasonLabels: {
+        marchEquinox: controls.marchEquinoxStringProperty.value,
+        juneSolstice: controls.juneSolsticeStringProperty.value,
+        septemberEquinox: controls.septemberEquinoxStringProperty.value,
+        decemberSolstice: controls.decemberSolsticeStringProperty.value,
+      },
     });
-    this.addChild(backgroundRect);
+    orbitView.center = new Vector2(this.layoutBounds.left + 235, this.layoutBounds.top + 220);
+    this.addChild(orbitView);
 
-    // ── Placeholder label ─────────────────────────────────────────────────────
-    // Replace this with your actual simulation content.
-    const placeholderText = new Text("Seasons", {
-      font: "bold 36px sans-serif",
-      fill: BasicCoordinatesAndSeasonsColors.textColorProperty,
-      center: this.layoutBounds.center,
+    // ── Celestial sphere with the Sun on the ecliptic (top-right) ────────────
+    const projection = new SkyProjection({
+      center: new Vector2(this.layoutBounds.right - 190, this.layoutBounds.top + 170),
+      radius: 100,
+      elevation: -0.35,
     });
-    this.addChild(placeholderText);
+    const cameraTarget = new Rectangle(
+      projection.center.x - SPHERE_RADIUS,
+      projection.center.y - SPHERE_RADIUS,
+      SPHERE_RADIUS * 2,
+      SPHERE_RADIUS * 2,
+      { fill: "rgba(0,0,0,0)" },
+    );
+    attachSkyCameraInteraction(cameraTarget, {
+      projection,
+      accessibleNameProperty: controls.starPositionStringProperty,
+    });
+    this.addChild(new Node({ children: [cameraTarget, new SeasonsSphereNode(projection, model)] }));
 
-    // ── Accessibility: per-control names ────────────────────────────────────────
-    // EVERY interactive node must carry an `accessibleName` (and an
-    // `accessibleHelpText` where useful), sourced from the StringManager `a11y`
-    // string group — never a hard-coded English literal. Sun/scenery-phet controls
-    // (NumberControl, Checkbox, ComboBox, AquaRadioButtonGroup, …) accept it as an
-    // option; a draggable plain Node needs `tagName: "div", focusable: true` too.
-    // Example (uncomment and adapt when you add a real control):
-    //
-    //   const a11y = StringManager.getInstance().getSeasonsA11yStrings();
-    //   const exampleButton = new RectangularPushButton({
-    //     ...FLAT_RECTANGULAR_BUTTON_OPTIONS, // flat appearance, not SceneryStack's default 3-D look
-    //     content: someIcon,
-    //     listener: () => model.doSomething(),
-    //     accessibleName: a11y.controls.exampleControlStringProperty,
-    //   });
-    //   this.addChild(exampleButton);
+    // ── Earth close-up (middle) ──────────────────────────────────────────────
+    const earthCloseUp = new EarthCloseUpNode(model, { radius: 48 });
+    earthCloseUp.center = new Vector2(this.layoutBounds.centerX + 30, this.layoutBounds.top + 150);
+    this.addChild(earthCloseUp);
 
-    // ── Reset All button ──────────────────────────────────────────────────────
-    // Always position at bottom-right (PhET convention).
+    // ── Sunbeam panel (middle-right) ─────────────────────────────────────────
+    const sunbeam = new SunbeamSpreadNode(model, { width: 240, height: 130 });
+    sunbeam.center = new Vector2(this.layoutBounds.centerX + 40, this.layoutBounds.top + 340);
+    this.addChild(sunbeam);
+
+    // ── Readouts + controls panel (bottom-left) ──────────────────────────────
+    const dateProperty = createSeasonsDateProperty(model);
+    const makeReadout = (labelProperty: TReadOnlyProperty<string>, valueProperty: TReadOnlyProperty<string>): HBox =>
+      new HBox({
+        spacing: 5,
+        align: "center",
+        children: [
+          new Text(labelProperty, { font, fill: textColor }),
+          new Text(valueProperty, { font, fill: textColor, fontWeight: "bold" }),
+        ],
+      });
+
+    const readouts = new VBox({
+      align: "left",
+      spacing: 3,
+      children: [
+        makeReadout(controls.dateStringProperty, dateProperty),
+        makeReadout(
+          controls.eclipticLongitudeStringProperty,
+          new DerivedProperty([model.sunEclipticLongitudeProperty], (v) => `${toFixed(v, 1)}°`),
+        ),
+        makeReadout(
+          controls.sunDeclinationStringProperty,
+          new DerivedProperty([model.sunDeclinationProperty], (v) => `${toFixed(v, 1)}°`),
+        ),
+        makeReadout(
+          controls.sunRightAscensionStringProperty,
+          new DerivedProperty([model.sunRightAscensionProperty], (v) => `${toFixed(v, 1)} h`),
+        ),
+        makeReadout(
+          controls.noonSunAltitudeStringProperty,
+          new DerivedProperty([model.noonSunAltitudeProperty], (v) => `${toFixed(v, 1)}°`),
+        ),
+      ],
+    });
+
+    const latitudeControl = new NumberControl(
+      controls.latitudeStringProperty,
+      model.latitudeProperty,
+      model.latitudeProperty.range,
+      {
+        ...SIM_NUMBER_CONTROL_OPTIONS,
+        delta: 1,
+        titleNodeOptions: { font, fill: textColor },
+        numberDisplayOptions: {
+          decimalPlaces: 0,
+          textOptions: { font, fill: BasicCoordinatesAndSeasonsColors.controlSurfaceTextColorProperty },
+        },
+        accessibleName: controls.latitudeStringProperty,
+      },
+    );
+
+    const makeCheckbox = (
+      property: typeof model.eclipticVisibleProperty,
+      labelProperty: TReadOnlyProperty<string>,
+    ): Checkbox =>
+      new Checkbox(property, new Text(labelProperty, { font, fill: textColor }), {
+        ...SIM_CHECKBOX_OPTIONS,
+        accessibleName: labelProperty,
+      });
+
+    const subsolarCheckbox = makeCheckbox(model.subsolarPointVisibleProperty, controls.showSubsolarPointStringProperty);
+    const eclipticCheckbox = makeCheckbox(model.eclipticVisibleProperty, controls.showEclipticStringProperty);
+    const equatorCheckbox = makeCheckbox(
+      model.celestialEquatorVisibleProperty,
+      controls.showCelestialEquatorStringProperty,
+    );
+
+    const timeControl = new TimeControlNode(model.timer.isPlayingProperty, {
+      playPauseStepButtonOptions: {
+        ...FLAT_PLAY_PAUSE_STEP_BUTTON_OPTIONS,
+        stepForwardButtonOptions: { ...FLAT_BUTTON_APPEARANCE_OPTIONS, listener: () => model.step(1 / 60) },
+      },
+    });
+
+    const panel = new BasicCoordinatesAndSeasonsPanel(
+      new VBox({
+        align: "left",
+        spacing: 8,
+        children: [timeControl, readouts, latitudeControl, subsolarCheckbox, eclipticCheckbox, equatorCheckbox],
+      }),
+    );
+    panel.left = this.layoutBounds.left + SCREEN_VIEW_MARGIN;
+    panel.bottom = this.layoutBounds.maxY - SCREEN_VIEW_MARGIN;
+    this.addChild(panel);
+
+    // ── Reset All ────────────────────────────────────────────────────────────
     const resetAllButton = new ResetAllButton({
       ...FLAT_RESET_ALL_BUTTON_OPTIONS,
       listener: () => {
         model.reset();
         this.reset();
+        projection.reset();
       },
       right: this.layoutBounds.maxX - SCREEN_VIEW_MARGIN,
       bottom: this.layoutBounds.maxY - SCREEN_VIEW_MARGIN,
     });
     this.addChild(resetAllButton);
 
-    // ── Accessibility: keyboard / reading traversal order ───────────────────────
-    // Make the parallel DOM (Tab order and screen-reader reading order)
-    // deterministic and independent of child z-order. ScreenView throws if you
-    // set pdomOrder on itself, so add a lightweight wrapper Node that "borrows"
-    // the interactive nodes in the order a user should reach them — Reset All
-    // last. Non-interactive decoration (background, placeholder) is omitted.
     this.addChild(
       new Node({
         pdomOrder: [
-          // TODO: add the sim's interactive nodes here, in traversal order
+          orbitView,
+          cameraTarget,
+          timeControl,
+          latitudeControl,
+          subsolarCheckbox,
+          eclipticCheckbox,
+          equatorCheckbox,
           resetAllButton,
         ],
       }),
     );
   }
 
-  /**
-   * Resets view-side state (animations, panel visibility, etc.).
-   * Called by the Reset All button listener.
-   */
   public reset(): void {
-    // TODO: reset any view-side state here
+    // State lives in the model; the projection is reset by the button listener.
   }
 
-  /**
-   * Steps the view forward by dt seconds for animation.
-   * @param _dt - elapsed time in seconds
-   */
   public override step(_dt: number): void {
-    // TODO: implement animation updates here
+    // The framework calls model.step via the Screen; nothing view-side to advance.
   }
 }

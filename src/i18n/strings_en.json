@@ -37,13 +37,15 @@
     },
     "seasons": {
       "screenSummary": {
-        "playArea": "The play area shows Earth orbiting the Sun, the ecliptic, and how axial tilt produces the seasons.",
-        "controlArea": "The control area has a Reset All button that returns the screen to its starting state.",
-        "interactionHint": "Explore the screen by interacting with its controls."
+        "playArea": "The play area shows Earth orbiting the Sun with a fixed tilted axis, the Sun riding the ecliptic on a celestial sphere, an Earth close-up with its day/night terminator, and a sunbeam panel.",
+        "controlArea": "The control area has play/pause, a latitude control, readouts for the date, the Sun's declination and right ascension, and the noon Sun altitude, plus toggles and a Reset All button.",
+        "interactionHint": "Play the animation or drag Earth around its orbit, and change the latitude, to see how the seasons arise."
       },
       "currentDetails": "The screen is in its initial state.",
+      "currentDetailsPattern": "It is {{date}}. The Sun's declination is {{declination}} degrees; at latitude {{latitude}} degrees the noon Sun altitude is {{altitude}} degrees.",
       "controls": {
-        "exampleControl": "Example control"
+        "earth": "Earth on its orbit",
+        "earthHelp": "Drag Earth around its orbit, or use the arrow keys, to change the date."
       }
     }
   },
@@ -64,7 +66,32 @@
     "showConstellations": "Zodiac constellations",
     "showGrid": "Grid",
     "showCelestialEquator": "Celestial equator",
-    "showEcliptic": "Ecliptic"
+    "showEcliptic": "Ecliptic",
+    "date": "Date",
+    "sunDeclination": "Sun's declination",
+    "sunRightAscension": "Sun's right ascension",
+    "noonSunAltitude": "Noon Sun altitude",
+    "eclipticLongitude": "Ecliptic longitude",
+    "showSubsolarPoint": "Subsolar point",
+    "marchEquinox": "March equinox",
+    "juneSolstice": "June solstice",
+    "septemberEquinox": "Sept. equinox",
+    "decemberSolstice": "Dec. solstice",
+    "datePattern": "{{month}} {{day}}",
+    "months": {
+      "january": "January",
+      "february": "February",
+      "march": "March",
+      "april": "April",
+      "may": "May",
+      "june": "June",
+      "july": "July",
+      "august": "August",
+      "september": "September",
+      "october": "October",
+      "november": "November",
+      "december": "December"
+    }
   },
   "preferences": {
     "title": "Simulation",

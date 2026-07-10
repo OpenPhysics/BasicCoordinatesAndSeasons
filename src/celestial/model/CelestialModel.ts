@@ -1,43 +1,52 @@
 /**
  * CelestialModel.ts
  *
- * The top-level model for the simulation screen.
- *
- * Add your simulation's state here using reactive Property objects from
- * scenerystack/axon. The view observes these properties and updates automatically.
- *
- * ── Example ──────────────────────────────────────────────────────────────────
- *   import { BooleanProperty, NumberProperty } from "scenerystack/axon";
- *
- *   public readonly isRunningProperty = new BooleanProperty(false);
- *   public readonly timeProperty = new NumberProperty(0);    // seconds
- *
- * ── Step cycle ────────────────────────────────────────────────────────────────
- * The Sim calls step(dt) on every animation frame. Advance your model state
- * in that method (e.g. integrate equations, update positions).
- *
- * ── Reset ─────────────────────────────────────────────────────────────────────
- * reset() is called when the user presses Reset All. Call .reset() on every
- * Property declared here.
+ * State for the Celestial Coordinates screen: one point on the sky (right
+ * ascension, declination) shared by the flat sky map and the celestial sphere,
+ * plus visibility toggles for the grid, celestial equator, ecliptic, and the
+ * zodiac constellations. Static — `step` is a no-op.
  */
+
+import { BooleanProperty, NumberProperty } from "scenerystack/axon";
+import { Range } from "scenerystack/dot";
 import type { TModel } from "scenerystack/joist";
 
+/** Default star position (compromise between the two NAAP celestial explorers). */
+export const DEFAULT_STAR_RA_HOURS = 8;
+export const DEFAULT_STAR_DEC_DEGREES = 30;
+
+export const STAR_RA_RANGE = new Range(0, 24);
+export const STAR_DEC_RANGE = new Range(-90, 90);
+
 export class CelestialModel implements TModel {
-  /**
-   * Resets all model state to initial values.
-   * Called when the user presses the Reset All button.
-   */
+  /** Right ascension of the point, in hours [0, 24). (No SI unit token for hours.) */
+  public readonly starRaProperty = new NumberProperty(DEFAULT_STAR_RA_HOURS, { range: STAR_RA_RANGE });
+
+  /** Declination of the point, in degrees [−90, 90]. */
+  public readonly starDecProperty = new NumberProperty(DEFAULT_STAR_DEC_DEGREES, { range: STAR_DEC_RANGE, units: "°" });
+
+  /** Whether the zodiac constellation stick figures are shown. */
+  public readonly constellationsVisibleProperty = new BooleanProperty(false);
+
+  /** Whether the RA/Dec graticule is shown. */
+  public readonly gridVisibleProperty = new BooleanProperty(true);
+
+  /** Whether the celestial equator is shown. */
+  public readonly celestialEquatorVisibleProperty = new BooleanProperty(true);
+
+  /** Whether the ecliptic is shown. */
+  public readonly eclipticVisibleProperty = new BooleanProperty(false);
+
   public reset(): void {
-    // TODO: call .reset() on every Property declared in this model
+    this.starRaProperty.reset();
+    this.starDecProperty.reset();
+    this.constellationsVisibleProperty.reset();
+    this.gridVisibleProperty.reset();
+    this.celestialEquatorVisibleProperty.reset();
+    this.eclipticVisibleProperty.reset();
   }
 
-  /**
-   * Steps the model forward by dt seconds.
-   * Called every animation frame by the Sim framework.
-   *
-   * @param _dt - elapsed time in seconds since the last frame
-   */
   public step(_dt: number): void {
-    // TODO: advance simulation state here
+    // Static screen — nothing to advance.
   }
 }

@@ -20,13 +20,19 @@
     },
     "celestial": {
       "screenSummary": {
-        "playArea": "El área de juego muestra un mapa plano del cielo y una esfera celeste para explorar la ascensión recta y la declinación.",
-        "controlArea": "El área de control tiene un botón Restablecer todo que devuelve la pantalla a su estado inicial.",
-        "interactionHint": "Explora la pantalla interactuando con sus controles."
+        "playArea": "El área de juego muestra un mapa plano del cielo y una esfera celeste. Una estrella arrastrable establece una ascensión recta y declinación, mostradas en ambos.",
+        "controlArea": "El área de control tiene campos de ascensión recta y declinación, interruptores para la cuadrícula, el ecuador celeste, la eclíptica y las constelaciones del zodíaco, y un botón Restablecer todo.",
+        "interactionHint": "Arrastra la estrella en el mapa o la esfera, o escribe una ascensión recta o declinación, para explorar las coordenadas celestes."
       },
       "currentDetails": "La pantalla está en su estado inicial.",
+      "currentDetailsPattern": "La estrella está en ascensión recta {{ra}} horas y declinación {{dec}} grados.",
       "controls": {
-        "exampleControl": "Control de ejemplo"
+        "flatSkyMapStar": "Estrella del mapa del cielo",
+        "flatSkyMapStarHelp": "Arrastra o usa las teclas de flecha para mover la estrella. La ascensión recta aumenta hacia la izquierda.",
+        "celestialSphere": "Esfera celeste",
+        "celestialSphereHelp": "Arrastra o usa las teclas de flecha para rotar la esfera.",
+        "guideStar": "Estrella guía",
+        "guideStarHelp": "Arrastra o usa las teclas de flecha para mover la ascensión recta y la declinación de la estrella."
       }
     },
     "seasons": {
@@ -53,7 +59,12 @@
     "north": "N",
     "south": "S",
     "east": "E",
-    "west": "O"
+    "west": "O",
+    "starPosition": "Posición de la estrella",
+    "showConstellations": "Constelaciones del zodíaco",
+    "showGrid": "Cuadrícula",
+    "showCelestialEquator": "Ecuador celeste",
+    "showEcliptic": "Eclíptica"
   },
   "preferences": {
     "title": "Simulación",

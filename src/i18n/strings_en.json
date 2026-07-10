@@ -20,13 +20,19 @@
     },
     "celestial": {
       "screenSummary": {
-        "playArea": "The play area shows a flat sky map and a celestial sphere for exploring right ascension and declination.",
-        "controlArea": "The control area has a Reset All button that returns the screen to its starting state.",
-        "interactionHint": "Explore the screen by interacting with its controls."
+        "playArea": "The play area shows a flat sky map and a celestial sphere. A draggable star sets one right ascension and declination, shown on both.",
+        "controlArea": "The control area has right-ascension and declination fields, toggles for the grid, celestial equator, ecliptic, and zodiac constellations, and a Reset All button.",
+        "interactionHint": "Drag the star on the map or the sphere, or type a right ascension or declination, to explore celestial coordinates."
       },
       "currentDetails": "The screen is in its initial state.",
+      "currentDetailsPattern": "The star is at right ascension {{ra}} hours and declination {{dec}} degrees.",
       "controls": {
-        "exampleControl": "Example control"
+        "flatSkyMapStar": "Sky map star",
+        "flatSkyMapStarHelp": "Drag or use the arrow keys to move the star. Right ascension increases to the left.",
+        "celestialSphere": "Celestial sphere",
+        "celestialSphereHelp": "Drag or use the arrow keys to rotate the sphere.",
+        "guideStar": "Guide star",
+        "guideStarHelp": "Drag or use the arrow keys to move the star's right ascension and declination."
       }
     },
     "seasons": {
@@ -53,7 +59,12 @@
     "north": "N",
     "south": "S",
     "east": "E",
-    "west": "W"
+    "west": "W",
+    "starPosition": "Star Position",
+    "showConstellations": "Zodiac constellations",
+    "showGrid": "Grid",
+    "showCelestialEquator": "Celestial equator",
+    "showEcliptic": "Ecliptic"
   },
   "preferences": {
     "title": "Simulation",

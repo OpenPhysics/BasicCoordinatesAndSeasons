@@ -20,13 +20,19 @@
     },
     "celestial": {
       "screenSummary": {
-        "playArea": "La zone de jeu affiche une carte du ciel plane et une sphère céleste pour explorer l'ascension droite et la déclinaison.",
-        "controlArea": "La zone de contrôle comporte un bouton Tout réinitialiser qui ramène l'écran à son état initial.",
-        "interactionHint": "Explorez l'écran en interagissant avec ses commandes."
+        "playArea": "La zone de jeu affiche une carte du ciel plane et une sphère céleste. Une étoile déplaçable définit une ascension droite et une déclinaison, affichées sur les deux.",
+        "controlArea": "La zone de contrôle comporte des champs d'ascension droite et de déclinaison, des interrupteurs pour la grille, l'équateur céleste, l'écliptique et les constellations du zodiaque, et un bouton Tout réinitialiser.",
+        "interactionHint": "Déplacez l'étoile sur la carte ou la sphère, ou saisissez une ascension droite ou une déclinaison, pour explorer les coordonnées célestes."
       },
       "currentDetails": "L'écran est dans son état initial.",
+      "currentDetailsPattern": "L'étoile est à l'ascension droite {{ra}} heures et à la déclinaison {{dec}} degrés.",
       "controls": {
-        "exampleControl": "Contrôle d'exemple"
+        "flatSkyMapStar": "Étoile de la carte du ciel",
+        "flatSkyMapStarHelp": "Déplacez ou utilisez les touches fléchées pour déplacer l'étoile. L'ascension droite augmente vers la gauche.",
+        "celestialSphere": "Sphère céleste",
+        "celestialSphereHelp": "Déplacez ou utilisez les touches fléchées pour faire pivoter la sphère.",
+        "guideStar": "Étoile guide",
+        "guideStarHelp": "Déplacez ou utilisez les touches fléchées pour déplacer l'ascension droite et la déclinaison de l'étoile."
       }
     },
     "seasons": {
@@ -53,7 +59,12 @@
     "north": "N",
     "south": "S",
     "east": "E",
-    "west": "O"
+    "west": "O",
+    "starPosition": "Position de l'étoile",
+    "showConstellations": "Constellations du zodiaque",
+    "showGrid": "Grille",
+    "showCelestialEquator": "Équateur céleste",
+    "showEcliptic": "Écliptique"
   },
   "preferences": {
     "title": "Simulation",

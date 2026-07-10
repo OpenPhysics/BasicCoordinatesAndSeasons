@@ -40,6 +40,14 @@
       }
     }
   },
+  "controls": {
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "rightAscension": "AD",
+    "declination": "Déc",
+    "rightAscensionLong": "ascension droite",
+    "declinationLong": "déclinaison"
+  },
   "preferences": {
     "title": "Simulation",
     "exampleToggle": "Exemple de bascule"

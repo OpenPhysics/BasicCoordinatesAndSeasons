@@ -1,0 +1,182 @@
+/**
+ * CelestialSphereNode.ts
+ *
+ * The celestial sphere drawn as a transparent wireframe in the equatorial frame
+ * (+Z = NCP): the silhouette, the RA/Dec graticule, the celestial equator, the
+ * ecliptic, and the pole markers. Lines on the far hemisphere are dashed.
+ * Re-projects whenever the view matrix (camera ∘ frame) changes.
+ *
+ * Paint order is split across {@link backLayer} and {@link frontLayer} so callers
+ * can sandwich the Earth globe between the dashed (behind) and solid (in front)
+ * strokes.
+ */
+
+import { Multilink, type TReadOnlyProperty } from "scenerystack/axon";
+import { Vector3 } from "scenerystack/dot";
+import { Shape } from "scenerystack/kite";
+import { Circle, Node, Path, Text } from "scenerystack/scenery";
+import { PhetFont } from "scenerystack/scenery-phet";
+import BasicCoordinatesAndSeasonsColors from "../../BasicCoordinatesAndSeasonsColors.js";
+import { raDecToVector3 } from "../SkyCoordinates.js";
+import type { SkyProjection } from "../SkyProjection.js";
+import { addSplitSmoothPolyline, projectSplitSmoothPolyline, smallCirclePoints } from "./skyGraphics.js";
+
+export type CelestialSphereNodeOptions = {
+  /** Toggles the N/E/S/W and NCP/SCP labels. Defaults to always visible. */
+  labelsVisibleProperty?: TReadOnlyProperty<boolean>;
+  /** Toggles the celestial equator. Defaults to always visible. */
+  celestialEquatorVisibleProperty?: TReadOnlyProperty<boolean>;
+  /** Toggles the ecliptic great circle. Defaults to always visible. */
+  eclipticVisibleProperty?: TReadOnlyProperty<boolean>;
+  /** Toggles the 0ʰ hour circle (RA = 0ʰ great circle). Defaults to always visible. */
+  hourCircleVisibleProperty?: TReadOnlyProperty<boolean>;
+  /** Toggles the RA/Dec graticule (declination circles and RA meridians). Defaults to always visible. */
+  gridVisibleProperty?: TReadOnlyProperty<boolean>;
+  /** Toggles the celestial-sphere silhouette outline. Defaults to always visible. */
+  outlineVisibleProperty?: TReadOnlyProperty<boolean>;
+};
+
+const NCP = new Vector3(0, 0, 1);
+const SCP = new Vector3(0, 0, -1);
+// Normal of the RA 0ʰ/12ʰ plane (the 0ʰ hour circle lies in this plane).
+const HOUR_CIRCLE_POLE = new Vector3(0, 1, 0);
+const RA_ZERO = new Vector3(1, 0, 0); // RA 0ʰ on the equator, where the "0h" label sits
+const DEC_CIRCLES = [-60, -30, 30, 60]; // degrees (0 is the equator, drawn separately)
+const RA_MERIDIANS = [0, 3, 6, 9, 12, 15, 18, 21]; // hours
+const ECLIPTIC_POLE = raDecToVector3(18, 66.56); // 23.44° from the NCP
+const DASH = [5, 4];
+const POLE_DOT_RADIUS = 4;
+const LABEL_OFFSET = 14;
+
+/** Half great-circle meridian at a fixed RA, sampled from SCP to NCP. */
+const meridianPoints = (raHours: number): Vector3[] => {
+  const points: Vector3[] = [];
+  for (let dec = -90; dec <= 90; dec += 7.5) {
+    points.push(raDecToVector3(raHours, dec));
+  }
+  return points;
+};
+
+export class CelestialSphereNode extends Node {
+  /** Dashed far-side strokes and the sphere outline — paint before the Earth globe. */
+  public readonly backLayer: Node;
+  /** Solid near-side strokes and pole markers — paint after the Earth globe. */
+  public readonly frontLayer: Node;
+
+  public constructor(projection: SkyProjection, options?: CelestialSphereNodeOptions) {
+    super();
+
+    const outline = new Circle(projection.radius, {
+      stroke: BasicCoordinatesAndSeasonsColors.sphereOutlineColorProperty,
+      lineWidth: 1,
+      center: projection.center,
+    });
+
+    const solid = (color: typeof BasicCoordinatesAndSeasonsColors.gridColorProperty, lineWidth: number): Path =>
+      new Path(null, { stroke: color, lineWidth });
+    const dashed = (color: typeof BasicCoordinatesAndSeasonsColors.gridColorProperty, lineWidth: number): Path =>
+      new Path(null, { stroke: color, lineWidth, lineDash: DASH, opacity: 0.6 });
+
+    const gridFront = solid(BasicCoordinatesAndSeasonsColors.gridColorProperty, 0.75);
+    const gridBack = dashed(BasicCoordinatesAndSeasonsColors.gridColorProperty, 0.75);
+    const equatorFront = solid(BasicCoordinatesAndSeasonsColors.celestialEquatorColorProperty, 1.5);
+    const equatorBack = dashed(BasicCoordinatesAndSeasonsColors.celestialEquatorColorProperty, 1.5);
+    const eclipticFront = solid(BasicCoordinatesAndSeasonsColors.eclipticColorProperty, 1.5);
+    const eclipticBack = dashed(BasicCoordinatesAndSeasonsColors.eclipticColorProperty, 1.5);
+
+    // The 0ʰ hour circle is grouped so a single visibility toggle hides it all.
+    const hourCircleFront = solid(BasicCoordinatesAndSeasonsColors.accentColorProperty, 1.5);
+    const hourCircleBack = dashed(BasicCoordinatesAndSeasonsColors.accentColorProperty, 1.5);
+    const hourCircleLabel = new Text("0ʰ", {
+      font: new PhetFont(12),
+      fill: BasicCoordinatesAndSeasonsColors.accentColorProperty,
+    });
+    const hourCircleBackLayer = new Node({ children: [hourCircleBack] });
+    const hourCircleFrontLayer = new Node({ children: [hourCircleFront, hourCircleLabel] });
+
+    const poleDot = (): Circle =>
+      new Circle(POLE_DOT_RADIUS, { fill: BasicCoordinatesAndSeasonsColors.cardinalLabelColorProperty });
+    const ncpDot = poleDot();
+    const scpDot = poleDot();
+    const poleLabel = (label: string): Text =>
+      new Text(label, { font: new PhetFont(12), fill: BasicCoordinatesAndSeasonsColors.cardinalLabelColorProperty });
+    const ncpText = poleLabel("NCP");
+    const scpText = poleLabel("SCP");
+
+    const celestialEquatorBackLayer = new Node({ children: [equatorBack] });
+    const celestialEquatorFrontLayer = new Node({ children: [equatorFront] });
+    const labels = new Node({ children: [ncpText, scpText] });
+
+    this.backLayer = new Node({
+      children: [outline, gridBack, eclipticBack, celestialEquatorBackLayer, hourCircleBackLayer],
+    });
+    this.frontLayer = new Node({
+      children: [gridFront, eclipticFront, celestialEquatorFrontLayer, hourCircleFrontLayer, ncpDot, scpDot, labels],
+    });
+
+    const placeLabel = (text: Node, point: Vector3): void => {
+      const screen = projection.project(point);
+      const away = screen.minus(projection.center);
+      text.center = screen.plus(away.magnitude > 0 ? away.normalized().timesScalar(LABEL_OFFSET) : away);
+    };
+
+    Multilink.multilink([projection.viewMatrixProperty], () => {
+      outline.center = projection.center;
+
+      const gridFrontShape = new Shape();
+      const gridBackShape = new Shape();
+      for (const dec of DEC_CIRCLES) {
+        addSplitSmoothPolyline(projection, smallCirclePoints(NCP, 90 - dec), true, gridFrontShape, gridBackShape);
+      }
+      for (const ra of RA_MERIDIANS) {
+        addSplitSmoothPolyline(projection, meridianPoints(ra), false, gridFrontShape, gridBackShape);
+      }
+      gridFront.shape = gridFrontShape;
+      gridBack.shape = gridBackShape;
+
+      const equator = projectSplitSmoothPolyline(projection, smallCirclePoints(NCP, 90), true);
+      equatorFront.shape = equator.front;
+      equatorBack.shape = equator.back;
+
+      const ecliptic = projectSplitSmoothPolyline(projection, smallCirclePoints(ECLIPTIC_POLE, 90), true);
+      eclipticFront.shape = ecliptic.front;
+      eclipticBack.shape = ecliptic.back;
+
+      const hourCircleSplit = projectSplitSmoothPolyline(projection, smallCirclePoints(HOUR_CIRCLE_POLE, 90), true);
+      hourCircleFront.shape = hourCircleSplit.front;
+      hourCircleBack.shape = hourCircleSplit.back;
+      placeLabel(hourCircleLabel, RA_ZERO);
+      hourCircleLabel.visible = projection.isFrontFacing(RA_ZERO);
+
+      ncpDot.center = projection.project(NCP);
+      scpDot.center = projection.project(SCP);
+      placeLabel(ncpText, NCP);
+      placeLabel(scpText, SCP);
+      ncpText.visible = projection.isFrontFacing(NCP);
+      scpText.visible = projection.isFrontFacing(SCP);
+    });
+
+    options?.celestialEquatorVisibleProperty?.link((visible) => {
+      celestialEquatorBackLayer.visible = visible;
+      celestialEquatorFrontLayer.visible = visible;
+    });
+    options?.eclipticVisibleProperty?.link((visible) => {
+      eclipticFront.visible = visible;
+      eclipticBack.visible = visible;
+    });
+    options?.hourCircleVisibleProperty?.link((visible) => {
+      hourCircleBackLayer.visible = visible;
+      hourCircleFrontLayer.visible = visible;
+    });
+    options?.gridVisibleProperty?.link((visible) => {
+      gridFront.visible = visible;
+      gridBack.visible = visible;
+    });
+    options?.outlineVisibleProperty?.link((visible) => {
+      outline.visible = visible;
+    });
+    options?.labelsVisibleProperty?.link((visible) => {
+      labels.visible = visible;
+    });
+  }
+}

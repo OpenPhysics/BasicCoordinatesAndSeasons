@@ -108,6 +108,15 @@ export class StringManager {
   }
 
   /**
+   * Shared control/readout labels (latitude, longitude, RA/Dec, …) used by the
+   * common view stack ported from the sibling motion2 sim. Mirrors that sim's
+   * top-level `controls` string group.
+   */
+  public getControls() {
+    return stringProperties.controls;
+  }
+
+  /**
    * Simulation-specific preference labels shown in Preferences → Simulation.
    */
   public getPreferences() {

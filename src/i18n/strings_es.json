@@ -40,6 +40,14 @@
       }
     }
   },
+  "controls": {
+    "latitude": "Latitud",
+    "longitude": "Longitud",
+    "rightAscension": "AR",
+    "declination": "Dec",
+    "rightAscensionLong": "ascensión recta",
+    "declinationLong": "declinación"
+  },
   "preferences": {
     "title": "Simulación",
     "exampleToggle": "Ejemplo de alternancia"

@@ -40,6 +40,14 @@
       }
     }
   },
+  "controls": {
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "rightAscension": "RA",
+    "declination": "Dec",
+    "rightAscensionLong": "right ascension",
+    "declinationLong": "declination"
+  },
   "preferences": {
     "title": "Simulation",
     "exampleToggle": "Example Toggle"

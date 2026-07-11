@@ -13,6 +13,7 @@ import type { ScreenOptions } from "scenerystack/sim";
 import { Screen } from "scenerystack/sim";
 import type { Tandem } from "scenerystack/tandem";
 import BasicCoordinatesAndSeasonsColors from "../BasicCoordinatesAndSeasonsColors.js";
+import { createSeasonsIcon } from "../common/BasicCoordinatesAndSeasonsScreenIcons.js";
 import { SeasonsModel } from "./model/SeasonsModel.js";
 import { SeasonsKeyboardHelpContent } from "./view/SeasonsKeyboardHelpContent.js";
 import { SeasonsScreenView } from "./view/SeasonsScreenView.js";
@@ -33,6 +34,7 @@ export class SeasonsScreen extends Screen<SeasonsModel, SeasonsScreenView> {
       optionize<SeasonsScreenOptions, EmptySelfOptions, ScreenOptions>()(
         {
           backgroundColorProperty: BasicCoordinatesAndSeasonsColors.backgroundColorProperty,
+          homeScreenIcon: createSeasonsIcon(),
           createKeyboardHelpNode: () => new SeasonsKeyboardHelpContent(),
         },
         options,

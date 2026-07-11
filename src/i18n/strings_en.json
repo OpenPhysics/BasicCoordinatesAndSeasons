@@ -95,6 +95,8 @@
   },
   "preferences": {
     "title": "Simulation",
-    "exampleToggle": "Example Toggle"
+    "earthMapResolution": "Earth Map Detail",
+    "earthMapResolutionLow": "Low (NAAP outline)",
+    "earthMapResolutionHigh": "High (Natural Earth)"
   }
 }

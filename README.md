@@ -4,8 +4,9 @@ A three-screen [SceneryStack](https://scenerystack.org/) port of the NAAP **Basi
 lab: **Terrestrial Coordinates**, **Celestial Coordinates**, and **Seasons**.
 Built with Vite 8, TypeScript 7, and Biome 2.
 
-> **Status:** framework scaffold — screens, PWA, CI, localization, and the Flash-decompile
-> workflow are wired up; the per-screen models and views are placeholders awaiting the port.
+> **Status:** all three screens are implemented — the NAAP terrestrial, celestial, and seasons
+> explorers are ported on a shared orthographic sky engine, with localization, projector mode,
+> keyboard/PDOM accessibility, home-screen icons, and unit tests in place.
 
 ## Screens
 
@@ -18,7 +19,7 @@ Built with Vite 8, TypeScript 7, and Biome 2.
 
 ## Features
 
-- Three-screen SceneryStack scaffold with model/view separation
+- Three implemented screens on a shared orthographic sky engine, with model/view separation
 - English, French, and Spanish localization via `StringManager`
 - Default and projector color profiles
 - Progressive Web App (installable, offline-capable)

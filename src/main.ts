@@ -38,6 +38,7 @@ onReadyToLaunch(() => {
       name: screenNames.terrestrialStringProperty,
       tandem: Tandem.ROOT.createTandem("terrestrialScreen"),
       backgroundColorProperty: BasicCoordinatesAndSeasonsColors.backgroundColorProperty,
+      earthMapResolutionProperty: simPreferences.earthMapResolutionProperty,
     }),
     new CelestialScreen({
       name: screenNames.celestialStringProperty,

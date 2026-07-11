@@ -8,7 +8,7 @@
  * keeps all three in sync.
  */
 
-import { DerivedProperty, NumberProperty, Property } from "scenerystack/axon";
+import { DerivedProperty, NumberProperty, type TReadOnlyProperty } from "scenerystack/axon";
 import { Vector2 } from "scenerystack/dot";
 import { Node, Rectangle, Text, VBox } from "scenerystack/scenery";
 import { PhetFont, ResetAllButton } from "scenerystack/scenery-phet";
@@ -18,7 +18,6 @@ import { Checkbox } from "scenerystack/sun";
 import BasicCoordinatesAndSeasonsColors from "../../BasicCoordinatesAndSeasonsColors.js";
 import {
   CONTROL_FONT_SIZE,
-  DEFAULT_EARTH_MAP_RESOLUTION,
   type EarthMapResolution,
   SCREEN_VIEW_MARGIN,
 } from "../../BasicCoordinatesAndSeasonsConstants.js";
@@ -39,11 +38,16 @@ const MAP_WIDTH = 440;
 const MAP_HEIGHT = 220;
 const GLOBE_RADIUS = 150;
 
+type TerrestrialScreenViewOptions = ScreenViewOptions & {
+  earthMapResolutionProperty: TReadOnlyProperty<EarthMapResolution>;
+};
+
 export class TerrestrialScreenView extends ScreenView {
-  public constructor(model: TerrestrialModel, options?: ScreenViewOptions) {
+  public constructor(model: TerrestrialModel, options: TerrestrialScreenViewOptions) {
+    const { earthMapResolutionProperty, ...screenViewOptions } = options;
     super({
       screenSummaryContent: new TerrestrialScreenSummaryContent(model),
-      ...options,
+      ...screenViewOptions,
     });
 
     const controls = StringManager.getInstance().getControls();
@@ -54,9 +58,8 @@ export class TerrestrialScreenView extends ScreenView {
     });
     this.addChild(backgroundRect);
 
-    // Shared display state (not model state): coastline detail and the globe's
-    // fixed sidereal time (0, so longitude alone spins the geography).
-    const earthMapResolutionProperty = new Property<EarthMapResolution>(DEFAULT_EARTH_MAP_RESOLUTION);
+    // Coastline detail comes from Preferences; the globe's sidereal time is fixed
+    // at 0, so longitude alone spins the geography.
     const siderealTimeProperty = new NumberProperty(0);
 
     // ── Flat map (left) ──────────────────────────────────────────────────────

@@ -11,21 +11,24 @@
  * 2. If it should also be user-editable at runtime, surface it as a preference
  *    in BasicCoordinatesAndSeasonsPreferencesModel (initialize that Property from this query parameter).
  *
- * Usage: append e.g. `?exampleToggle=true` to the sim URL.
+ * Usage: append e.g. `?earthMapResolution=low` to the sim URL.
  */
 
 import { logGlobal } from "scenerystack/phet-core";
 import { QueryStringMachine } from "scenerystack/query-string-machine";
+import { DEFAULT_EARTH_MAP_RESOLUTION, EARTH_MAP_RESOLUTION_VALUES } from "../BasicCoordinatesAndSeasonsConstants.js";
 import BasicCoordinatesAndSeasonsNamespace from "../BasicCoordinatesAndSeasonsNamespace.js";
 
 const basicCoordinatesAndSeasonsQueryParameters = QueryStringMachine.getAll({
   /**
-   * Example public boolean parameter. Replace with real sim-specific parameters,
-   * or remove if the sim has none.
+   * Shoreline detail of the Terrestrial screen's flat map and globe. `low` uses
+   * the original NAAP outline; `high` uses Natural Earth land polygons.
+   * Example: `?earthMapResolution=low`.
    */
-  exampleToggle: {
-    type: "boolean",
-    defaultValue: false,
+  earthMapResolution: {
+    type: "string",
+    defaultValue: DEFAULT_EARTH_MAP_RESOLUTION,
+    validValues: EARTH_MAP_RESOLUTION_VALUES,
     public: true,
   },
 });

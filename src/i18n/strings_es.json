@@ -95,6 +95,8 @@
   },
   "preferences": {
     "title": "Simulación",
-    "exampleToggle": "Ejemplo de alternancia"
+    "earthMapResolution": "Detalle del mapa terrestre",
+    "earthMapResolutionLow": "Bajo (contorno NAAP)",
+    "earthMapResolutionHigh": "Alto (Natural Earth)"
   }
 }

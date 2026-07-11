@@ -4,29 +4,30 @@
  * Model for the simulation-specific preferences shown in Preferences →
  * Simulation. Each preference Property takes its initial value from the
  * corresponding query parameter in basicCoordinatesAndSeasonsQueryParameters.
- *
- * Remove the example preference (and its query parameter / UI control) if the
- * sim has no sim-specific preferences.
  */
 
-import { BooleanProperty } from "scenerystack/axon";
+import { StringUnionProperty } from "scenerystack/axon";
 import type { Tandem } from "scenerystack/tandem";
+import { EARTH_MAP_RESOLUTION_VALUES, type EarthMapResolution } from "../BasicCoordinatesAndSeasonsConstants.js";
 import BasicCoordinatesAndSeasonsNamespace from "../BasicCoordinatesAndSeasonsNamespace.js";
 import basicCoordinatesAndSeasonsQueryParameters from "./basicCoordinatesAndSeasonsQueryParameters.js";
 
 export class BasicCoordinatesAndSeasonsPreferencesModel {
-  /** Example preference; initial value comes from the `exampleToggle` query parameter. */
-  public readonly exampleToggleProperty: BooleanProperty;
+  /** Flat map / globe shoreline detail; initial value from the `earthMapResolution` query parameter. */
+  public readonly earthMapResolutionProperty: StringUnionProperty<EarthMapResolution>;
 
   public constructor(tandem?: Tandem) {
-    this.exampleToggleProperty = new BooleanProperty(
-      basicCoordinatesAndSeasonsQueryParameters.exampleToggle,
-      tandem ? { tandem: tandem.createTandem("exampleToggleProperty") } : undefined,
+    this.earthMapResolutionProperty = new StringUnionProperty(
+      basicCoordinatesAndSeasonsQueryParameters.earthMapResolution as EarthMapResolution,
+      {
+        validValues: EARTH_MAP_RESOLUTION_VALUES,
+        ...(tandem && { tandem: tandem.createTandem("earthMapResolutionProperty") }),
+      },
     );
   }
 
   public reset(): void {
-    this.exampleToggleProperty.reset();
+    this.earthMapResolutionProperty.reset();
   }
 }
 

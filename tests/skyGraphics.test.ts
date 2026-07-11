@@ -71,7 +71,7 @@ describe("closed-loop seam handling (smooth split)", () => {
   // kite's Shape.close() leaves a trailing empty subpath (one point, no
   // segments) — a Canvas2D-style quirk that draws nothing. Filter it out when
   // asserting on what's actually rendered.
-  const drawnSubpaths = (shape: { subpaths: { segments: unknown[] }[] }) =>
+  const drawnSubpaths = (shape: { subpaths: { segments: unknown[] }[] }): { segments: unknown[] }[] =>
     shape.subpaths.filter((s) => s.segments.length > 0);
 
   it("draws a fully-visible closed ring as one closed subpath (no seam gap)", () => {

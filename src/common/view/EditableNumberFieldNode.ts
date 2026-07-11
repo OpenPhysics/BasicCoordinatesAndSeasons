@@ -68,7 +68,11 @@ export class EditableNumberFieldNode extends HBox {
     });
     const fieldNode = new Node({
       children: [fieldBackground, valueText],
+      // A named, focusable PDOM entry so screen-reader users can find and edit
+      // the field. accessibleName follows the (reactive) label text.
+      tagName: "div",
       focusable: true,
+      accessibleName: labelProperty,
       cursor: "text",
     });
     valueText.centerX = fieldBackground.centerX;

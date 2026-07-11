@@ -224,7 +224,7 @@ export class FlatEarthMapNode extends Node {
       children: [mapRect, overlay],
       tagName: "div",
       focusable: true,
-      accessibleName: controls.latitudeStringProperty,
+      accessibleName: controls.observerLocationStringProperty,
     });
 
     // The DragListener clamps modelPositionProperty to the lat/long bounds

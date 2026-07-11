@@ -5,9 +5,9 @@
  *   - plain drag / arrow keys   → free camera rotate
  *   - Alt-drag / Alt+arrows     → rotate about zenith only
  *
- * Projection-only: unlike the RotatingSky original this has no SkyModel
- * dependency — the sidereal-time drag mode and the shift-click "add star" mode
- * are not needed here, so they are dropped.
+ * Projection-only: unlike the sibling motion2 sim's original this has no
+ * SkyModel dependency — the sidereal-time drag mode and the shift-click "add
+ * star" mode are not needed here, so they are dropped.
  */
 
 import type { TReadOnlyProperty } from "scenerystack/axon";

@@ -4,8 +4,8 @@ This document describes the model (the underlying physics, math, and behavior) f
 terms appropriate for an educator. It is the companion to
 [implementation-notes.md](./implementation-notes.md), which targets developers.
 
-> **Status:** the sim is a framework scaffold; the models below describe the intended port of the
-> NAAP "Basic Coordinates and Seasons" lab and will be refined as each screen is implemented.
+> **Status:** implemented. The equations below are realized in `src/common/SunPosition.ts`
+> (unit-tested in `tests/SunPosition.test.ts`) and consumed by the three screen models.
 
 ## Overview
 
@@ -35,8 +35,12 @@ then uses them to explain the seasons:
 ## Governing equations
 
 - The Sun's declination through the year: sin δ☉ = sin ε · sin λ☉.
+- The Sun's right ascension: α☉ = atan2(sin λ☉ · cos ε, cos λ☉), normalized to [0 h, 24 h).
 - Noon solar altitude at latitude φ: h = 90° − |φ − δ☉|.
 - The orbit is modeled as circular (the NAAP original does the same); one full orbit = one year.
+  The Sun's ecliptic longitude maps to the calendar as λ☉ = 360° · (dayOfYear − 79.25) / 365.24,
+  so λ☉ = 0° at the March equinox (day ≈ 79.25). When playing, the Seasons screen advances the
+  date at 5 simulated days per real second.
 
 ## Simplifications and assumptions
 

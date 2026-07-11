@@ -1,16 +1,20 @@
 /**
  * TerrestrialKeyboardHelpContent.ts
  *
- * Content for the keyboard-help dialog (the "?" button in the navigation bar).
- * The template's only interactions are buttons and Reset All, so a single
- * basic-actions section covers the available keyboard controls. Add a slider or
- * combo-box section here as the simulation grows.
+ * Keyboard Shortcuts dialog for the Terrestrial Coordinates screen. The
+ * observer marker on the flat map and on the globe is keyboard-draggable
+ * (arrow keys nudge latitude/longitude), so a "move draggable items" section
+ * documents that alongside the basic actions.
  */
 
-import { BasicActionsKeyboardHelpSection, TwoColumnKeyboardHelpContent } from "scenerystack/scenery-phet";
+import {
+  BasicActionsKeyboardHelpSection,
+  MoveDraggableItemsKeyboardHelpSection,
+  TwoColumnKeyboardHelpContent,
+} from "scenerystack/scenery-phet";
 
 export class TerrestrialKeyboardHelpContent extends TwoColumnKeyboardHelpContent {
   public constructor() {
-    super([new BasicActionsKeyboardHelpSection()], []);
+    super([new MoveDraggableItemsKeyboardHelpSection()], [new BasicActionsKeyboardHelpSection()]);
   }
 }

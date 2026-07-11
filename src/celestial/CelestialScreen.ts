@@ -13,6 +13,7 @@ import type { ScreenOptions } from "scenerystack/sim";
 import { Screen } from "scenerystack/sim";
 import type { Tandem } from "scenerystack/tandem";
 import BasicCoordinatesAndSeasonsColors from "../BasicCoordinatesAndSeasonsColors.js";
+import { createCelestialIcon } from "../common/BasicCoordinatesAndSeasonsScreenIcons.js";
 import { CelestialModel } from "./model/CelestialModel.js";
 import { CelestialKeyboardHelpContent } from "./view/CelestialKeyboardHelpContent.js";
 import { CelestialScreenView } from "./view/CelestialScreenView.js";
@@ -33,6 +34,7 @@ export class CelestialScreen extends Screen<CelestialModel, CelestialScreenView>
       optionize<CelestialScreenOptions, EmptySelfOptions, ScreenOptions>()(
         {
           backgroundColorProperty: BasicCoordinatesAndSeasonsColors.backgroundColorProperty,
+          homeScreenIcon: createCelestialIcon(),
           createKeyboardHelpNode: () => new CelestialKeyboardHelpContent(),
         },
         options,

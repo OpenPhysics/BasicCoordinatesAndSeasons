@@ -95,6 +95,8 @@
   },
   "preferences": {
     "title": "Simulation",
-    "exampleToggle": "Exemple de bascule"
+    "earthMapResolution": "Détail de la carte terrestre",
+    "earthMapResolutionLow": "Faible (contour NAAP)",
+    "earthMapResolutionHigh": "Élevé (Natural Earth)"
   }
 }

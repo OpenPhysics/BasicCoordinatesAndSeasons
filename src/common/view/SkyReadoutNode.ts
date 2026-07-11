@@ -2,8 +2,8 @@
  * SkyReadoutNode.ts
  *
  * Editable RA/Dec coordinate fields for a point on the sky, styled like the
- * original NAAP lab (two inputs beneath a sky view). Unlike the RotatingSky
- * original this takes plain writable Properties — this sim has no SkyModel and
+ * original NAAP lab (two inputs beneath a sky view). Unlike the sibling motion2
+ * sim's original this takes plain writable Properties — this sim has no SkyModel and
  * a single, always-present point — so the fields are always enabled and typing
  * a value writes straight back to the bound Property.
  */

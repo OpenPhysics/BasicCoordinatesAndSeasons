@@ -161,13 +161,20 @@
       }
     },
     {
-      "includes": ["src/common/model/EarthShoreDataHigh.ts", "src/common/model/EarthShoreDataLow.ts"],
+      "includes": [
+        "src/common/model/EarthShoreDataHigh.ts",
+        "src/common/model/EarthShoreDataLow.ts",
+        "src/celestial/model/BrightStarCatalog.ts"
+      ],
       "linter": {
         "rules": {
           "suspicious": {
             "noApproximativeNumericConstant": "off"
           }
         }
+      },
+      "formatter": {
+        "enabled": false
       }
     }
   ],

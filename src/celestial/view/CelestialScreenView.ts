@@ -30,6 +30,7 @@ import { StringManager } from "../../i18n/StringManager.js";
 import type { CelestialModel } from "../model/CelestialModel.js";
 import { CelestialScreenSummaryContent } from "./CelestialScreenSummaryContent.js";
 import { FlatSkyMapNode } from "./FlatSkyMapNode.js";
+import { StarFieldNode } from "./StarFieldNode.js";
 
 const MAP_WIDTH = 430;
 const MAP_HEIGHT = 300;
@@ -77,6 +78,7 @@ export class CelestialScreenView extends ScreenView {
       celestialEquatorVisibleProperty: model.celestialEquatorVisibleProperty,
       eclipticVisibleProperty: model.eclipticVisibleProperty,
     });
+    const starField = new StarFieldNode(projection);
     const guideNode = new CoordinateGuideNode(projection, {
       guideRaProperty: model.starRaProperty,
       guideDecProperty: model.starDecProperty,
@@ -100,14 +102,17 @@ export class CelestialScreenView extends ScreenView {
       accessibleHelpTextProperty: a11y.controls.celestialSphereHelpStringProperty,
     });
 
-    // Paint order: hit target → dashed far side → opaque nothing → solid near side.
+    // Paint order: hit target → dashed far side → dim back stars → solid near
+    // side → solid front stars → guide star (on top).
     this.addChild(
       new Node({
         children: [
           cameraTarget,
           sphereNode.backLayer,
+          starField.backLayer,
           guideNode.backLayer,
           sphereNode.frontLayer,
+          starField.frontLayer,
           guideNode.frontLayer,
         ],
       }),

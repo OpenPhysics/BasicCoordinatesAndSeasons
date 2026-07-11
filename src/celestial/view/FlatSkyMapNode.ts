@@ -18,7 +18,14 @@ import { CONTROL_FONT_SIZE, STAR_RADIUS } from "../../BasicCoordinatesAndSeasons
 import BasicCoordinatesAndSeasonsHotkeyData from "../../common/BasicCoordinatesAndSeasonsHotkeyData.js";
 import { normalizeHours } from "../../common/SkyCoordinates.js";
 import { createStarShape } from "../../common/view/starGraphics.js";
+import {
+  BRIGHT_STAR_COUNT,
+  BRIGHT_STAR_DEC_DEG,
+  BRIGHT_STAR_MAG,
+  BRIGHT_STAR_RA_HOURS,
+} from "../model/BrightStarCatalog.js";
 import { ZODIAC_CONSTELLATIONS } from "../model/ZodiacConstellations.js";
+import { magToRadius } from "./StarFieldNode.js";
 
 export type FlatSkyMapNodeOptions = {
   width: number;
@@ -83,6 +90,20 @@ export class FlatSkyMapNode extends Node {
       tickLabels.addChild(label);
     }
 
+    // Background stars from the bright-star catalog.
+    const starShape = new Shape();
+    for (let i = 0; i < BRIGHT_STAR_COUNT; i++) {
+      const ra = BRIGHT_STAR_RA_HOURS[i];
+      const dec = BRIGHT_STAR_DEC_DEG[i];
+      const mag = BRIGHT_STAR_MAG[i];
+      if (ra !== undefined && dec !== undefined && mag !== undefined) {
+        starShape.circle(raToX(ra), decToY(dec), magToRadius(mag));
+      }
+    }
+    const starPath = new Path(starShape, {
+      fill: BasicCoordinatesAndSeasonsColors.starColorProperty,
+    });
+
     // Zodiac constellation stick figures.
     const zodiacShape = new Shape();
     const zodiacDots = new Shape();
@@ -113,7 +134,7 @@ export class FlatSkyMapNode extends Node {
     });
 
     const content = new Node({
-      children: [gridPath, zodiacNode],
+      children: [gridPath, starPath, zodiacNode],
       clipArea: Shape.rect(0, 0, width, height),
     });
 

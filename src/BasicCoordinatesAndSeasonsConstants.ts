@@ -49,6 +49,12 @@ export const SLIDER_THUMB_SIZE = new Dimension2(13, 26);
 /** Arrow-key nudge step (°) for dragging the observer location on the map/globe. */
 export const LOCATION_STEP_DEGREES = 5;
 
+/** Longitude shift (°) applied by each flat-map pan (◀ / ▶) button. Matches NAAP's ±45°. */
+export const MAP_PAN_STEP_DEGREES = 45;
+
+/** Duration (s) of the animated flat-map pan, matching NAAP's 400 ms shift. */
+export const MAP_PAN_ANIMATION_DURATION = 0.4;
+
 // ── Sky-engine geometry (ported from the sibling motion2 sim) ─────────────────────────────
 
 /** Radius (px) of a full celestial sphere / globe projection. */
@@ -65,6 +71,12 @@ export const STAR_RADIUS = 5;
 export type EarthMapResolution = "low" | "high";
 export const EARTH_MAP_RESOLUTION_VALUES = ["low", "high"] as const satisfies readonly EarthMapResolution[];
 export const DEFAULT_EARTH_MAP_RESOLUTION: EarthMapResolution = "high";
+
+// ── Coordinate display format (Terrestrial screen) ────────────────────────────
+
+/** Decimal degrees (`40.8° N`) vs sexagesimal degrees-minutes (`40° 48′ N`). */
+export type CoordinateFormat = "decimal" | "sexagesimal";
+export const COORDINATE_FORMAT_VALUES = ["decimal", "sexagesimal"] as const satisfies readonly CoordinateFormat[];
 
 // ── Observer coordinate ranges & defaults (degrees) ───────────────────────────
 // NAAP's default location is Lincoln, NE (40.8° N, 96.7° W), verified against the
@@ -109,11 +121,14 @@ BasicCoordinatesAndSeasonsNamespace.register("BasicCoordinatesAndSeasonsConstant
   NUMBER_CONTROL_SLIDER_TRACK_SIZE,
   SLIDER_THUMB_SIZE,
   LOCATION_STEP_DEGREES,
+  MAP_PAN_STEP_DEGREES,
+  MAP_PAN_ANIMATION_DURATION,
   SPHERE_RADIUS,
   SKY_VIEW_MAX_SIZE,
   STAR_RADIUS,
   EARTH_MAP_RESOLUTION_VALUES,
   DEFAULT_EARTH_MAP_RESOLUTION,
+  COORDINATE_FORMAT_VALUES,
   DEFAULT_LATITUDE,
   DEFAULT_LONGITUDE,
   LATITUDE_RANGE,

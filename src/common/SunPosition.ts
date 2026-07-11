@@ -74,6 +74,19 @@ export function dayOfYearForEclipticLongitude(lambdaDeg: number): number {
 }
 
 /**
+ * Day-of-year (1-based, non-leap) of the first day of the given calendar month
+ * (0 = January … 11 = December). January 1 → 1, February 1 → 32, etc.
+ */
+export function firstDayOfYearForMonth(monthIndex: number): number {
+  const clamped = Math.max(0, Math.min(11, Math.floor(monthIndex)));
+  let day = 1;
+  for (let m = 0; m < clamped; m++) {
+    day += MONTH_LENGTHS[m] ?? 31;
+  }
+  return day;
+}
+
+/**
  * Calendar month/day for a day-of-year, using a fixed non-leap year. The
  * day-of-year is floored and wrapped into [1, 365] first.
  *

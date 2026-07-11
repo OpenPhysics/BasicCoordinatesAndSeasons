@@ -8,7 +8,13 @@
  * advances λ☉ at SEASONS_ANIMATION_DAYS_PER_SECOND.
  */
 
-import { BooleanProperty, DerivedProperty, NumberProperty, type TReadOnlyProperty } from "scenerystack/axon";
+import {
+  BooleanProperty,
+  DerivedProperty,
+  NumberProperty,
+  StringUnionProperty,
+  type TReadOnlyProperty,
+} from "scenerystack/axon";
 import { Range } from "scenerystack/dot";
 import type { TModel } from "scenerystack/joist";
 import {
@@ -19,6 +25,7 @@ import {
 } from "../../BasicCoordinatesAndSeasonsConstants.js";
 import {
   dayOfYearForEclipticLongitude,
+  eclipticLongitudeForDayOfYear,
   monthAndDayForDayOfYear,
   noonSunAltitudeDeg,
   sunDeclinationDeg,
@@ -28,12 +35,50 @@ import { TimeModel } from "../../common/TimeModel.js";
 
 export const ECLIPTIC_LONGITUDE_RANGE = new Range(0, 360);
 
+/**
+ * Initial Sun position, matching the NAAP "Seasons and Ecliptic Simulator" reset
+ * state: day-of-year 41 (February 10). Starting off the equinox keeps the ecliptic
+ * visibly separated from the celestial equator on the sphere view (their labels
+ * would otherwise coincide) and reproduces the Flash lab's opening frame.
+ */
+const DEFAULT_SUN_ECLIPTIC_LONGITUDE = eclipticLongitudeForDayOfYear(41);
+
+/** Which visualization fills the large left-hand view panel. */
+export const SEASONS_VIEW_MODES = ["orbit", "sphere"] as const;
+export type SeasonsViewMode = (typeof SEASONS_VIEW_MODES)[number];
+
+/** How the Earth close-up is framed: side-on, or looking down the Sun–Earth line. */
+export const EARTH_VIEW_MODES = ["side", "sun"] as const;
+export type EarthViewMode = (typeof EARTH_VIEW_MODES)[number];
+
+/** Which sunbeam panel is shown: the side-on ray angle, or the top-down footprint spread. */
+export const SUNBEAM_MODES = ["angle", "spread"] as const;
+export type SunbeamMode = (typeof SUNBEAM_MODES)[number];
+
 export class SeasonsModel implements TModel {
   /** Play/pause + elapsed-time clock. */
   public readonly timer = new TimeModel();
 
   /** Canonical state: the Sun's ecliptic longitude λ☉ (°, 0 = March equinox). */
-  public readonly sunEclipticLongitudeProperty = new NumberProperty(0, { range: ECLIPTIC_LONGITUDE_RANGE, units: "°" });
+  public readonly sunEclipticLongitudeProperty = new NumberProperty(DEFAULT_SUN_ECLIPTIC_LONGITUDE, {
+    range: ECLIPTIC_LONGITUDE_RANGE,
+    units: "°",
+  });
+
+  /** Which view fills the large left panel: the orbit ("orbit") or the celestial sphere ("sphere"). */
+  public readonly viewModeProperty = new StringUnionProperty<SeasonsViewMode>("orbit", {
+    validValues: [...SEASONS_VIEW_MODES],
+  });
+
+  /** How the Earth close-up is framed (NAAP default: "side"). */
+  public readonly earthViewModeProperty = new StringUnionProperty<EarthViewMode>("side", {
+    validValues: [...EARTH_VIEW_MODES],
+  });
+
+  /** Which sunbeam panel is shown (NAAP default: "angle"). */
+  public readonly sunbeamModeProperty = new StringUnionProperty<SunbeamMode>("angle", {
+    validValues: [...SUNBEAM_MODES],
+  });
 
   /** The observer latitude whose noon Sun altitude is shown (°, +N). */
   public readonly latitudeProperty = new NumberProperty(DEFAULT_LATITUDE, { range: LATITUDE_RANGE, units: "°" });
@@ -41,11 +86,18 @@ export class SeasonsModel implements TModel {
   /** Whether the subsolar-point marker is shown (NAAP default: on). */
   public readonly subsolarPointVisibleProperty = new BooleanProperty(true);
 
-  /** Whether the ecliptic is shown. */
-  public readonly eclipticVisibleProperty = new BooleanProperty(true);
+  /**
+   * Whether the celestial-sphere text labels are shown (north/south celestial pole,
+   * celestial equator, ecliptic, and the "to VE / AE / SS / WS" direction arrows).
+   * NAAP's single "labels" checkbox; off by default, matching the Flash reset state.
+   */
+  public readonly sphereLabelsVisibleProperty = new BooleanProperty(false);
 
-  /** Whether the celestial equator is shown. */
-  public readonly celestialEquatorVisibleProperty = new BooleanProperty(true);
+  /**
+   * Whether the Earth close-up's reference-circle labels (equator, tropics, polar
+   * circles, poles) are shown. NAAP's per-view "labels" checkbox; off by default.
+   */
+  public readonly earthLabelsVisibleProperty = new BooleanProperty(false);
 
   // ── Derived quantities (all from λ☉ and latitude) ──────────────────────────
   /** Sun declination δ☉ (°). */
@@ -87,10 +139,13 @@ export class SeasonsModel implements TModel {
 
   public reset(): void {
     this.timer.reset();
+    this.viewModeProperty.reset();
+    this.earthViewModeProperty.reset();
+    this.sunbeamModeProperty.reset();
     this.sunEclipticLongitudeProperty.reset();
     this.latitudeProperty.reset();
     this.subsolarPointVisibleProperty.reset();
-    this.eclipticVisibleProperty.reset();
-    this.celestialEquatorVisibleProperty.reset();
+    this.sphereLabelsVisibleProperty.reset();
+    this.earthLabelsVisibleProperty.reset();
   }
 }

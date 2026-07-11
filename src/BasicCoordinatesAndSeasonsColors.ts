@@ -127,6 +127,32 @@ const BasicCoordinatesAndSeasonsColors = {
     projector: "#f9a825",
   }),
 
+  /**
+   * The celestial equator on the Seasons celestial sphere. NAAP draws it a neutral
+   * light grey there (0xA0A0A0), reserving the warm equator color for the Celestial
+   * Coordinates screen.
+   */
+  seasonsCelestialEquatorColorProperty: new ProfileColorProperty(
+    BasicCoordinatesAndSeasonsNamespace,
+    "seasonsCelestialEquator",
+    {
+      default: "#c4ccd4",
+      projector: "#6b7278",
+    },
+  ),
+
+  /** The ecliptic on the Seasons celestial sphere (NAAP green, 0x478930). */
+  seasonsEclipticColorProperty: new ProfileColorProperty(BasicCoordinatesAndSeasonsNamespace, "seasonsEcliptic", {
+    default: "#5fbf46",
+    projector: "#2e7d32",
+  }),
+
+  /** The galactic-equator great circle (pink, matching NAAP). */
+  galacticEquatorColorProperty: new ProfileColorProperty(BasicCoordinatesAndSeasonsNamespace, "galacticEquator", {
+    default: "#ff9fff",
+    projector: "#ad3dad",
+  }),
+
   /** Cardinal-direction / axis text labels drawn over the sky views. */
   cardinalLabelColorProperty: new ProfileColorProperty(BasicCoordinatesAndSeasonsNamespace, "cardinalLabel", {
     default: "#ffffff",
@@ -175,7 +201,69 @@ const BasicCoordinatesAndSeasonsColors = {
     projector: "#c62828",
   }),
 
+  /**
+   * The longitude indicator line (the observer's meridian) drawn across the
+   * flat map and globe. Salmon-red, matching NAAP's mapExplorer `moveCursor`
+   * longitude segment (0xFE4B4B).
+   */
+  longitudeIndicatorColorProperty: new ProfileColorProperty(BasicCoordinatesAndSeasonsNamespace, "longitudeIndicator", {
+    default: "#fe4b4b",
+    projector: "#c62828",
+  }),
+
+  /**
+   * The latitude indicator line (the observer's parallel) drawn across the flat
+   * map and globe. Blue-violet, matching NAAP's mapExplorer `moveCursor`
+   * latitude segment (0x4B4BFE).
+   */
+  latitudeIndicatorColorProperty: new ProfileColorProperty(BasicCoordinatesAndSeasonsNamespace, "latitudeIndicator", {
+    default: "#4b6bff",
+    projector: "#1565c0",
+  }),
+
+  /** The International Date Line drawn over the flat map ("map features"). */
+  dateLineColorProperty: new ProfileColorProperty(BasicCoordinatesAndSeasonsNamespace, "dateLine", {
+    default: "#ffb74d",
+    projector: "#ef6c00",
+  }),
+
+  /** Reference-city dot + label text on the flat map ("show cities"). */
+  cityLabelColorProperty: new ProfileColorProperty(BasicCoordinatesAndSeasonsNamespace, "cityLabel", {
+    default: "#ffffff",
+    projector: "#1a1a1a",
+  }),
+
   // ── Sim-specific colors (new for Basic Coordinates and Seasons) ──────────────
+
+  /** Fill of the framed "view stage" panels (orbit/sphere, Earth close-up). Near-black like the NAAP original. */
+  viewFrameFillColorProperty: new ProfileColorProperty(BasicCoordinatesAndSeasonsNamespace, "viewFrameFill", {
+    default: "#05060d",
+    projector: "#f0f4fa",
+  }),
+
+  /** Border of the framed view-stage panels. */
+  viewFrameStrokeColorProperty: new ProfileColorProperty(BasicCoordinatesAndSeasonsNamespace, "viewFrameStroke", {
+    default: "#2b3752",
+    projector: "#b8c4d4",
+  }),
+
+  /** Muted italic caption text drawn inside the view panels ("click and drag …"). */
+  viewCaptionColorProperty: new ProfileColorProperty(BasicCoordinatesAndSeasonsNamespace, "viewCaption", {
+    default: "#9aa6bd",
+    projector: "#5a6472",
+  }),
+
+  /** Sky fill of the sunbeam angle-of-incidence panel. */
+  sunbeamSkyColorProperty: new ProfileColorProperty(BasicCoordinatesAndSeasonsNamespace, "sunbeamSky", {
+    default: "#5b83c0",
+    projector: "#9fc0ea",
+  }),
+
+  /** Ground fill of the sunbeam angle-of-incidence panel. */
+  sunbeamGroundColorProperty: new ProfileColorProperty(BasicCoordinatesAndSeasonsNamespace, "sunbeamGround", {
+    default: "#4f7a3a",
+    projector: "#7cb342",
+  }),
 
   /** The Sun disk (orbit view, ecliptic marker, close-up subsolar point). */
   sunColorProperty: new ProfileColorProperty(BasicCoordinatesAndSeasonsNamespace, "sun", {

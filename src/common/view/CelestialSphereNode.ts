@@ -3,8 +3,8 @@
  *
  * The celestial sphere drawn as a transparent wireframe in the equatorial frame
  * (+Z = NCP): the silhouette, the RA/Dec graticule, the celestial equator, the
- * ecliptic, and the pole markers. Lines on the far hemisphere are dashed.
- * Re-projects whenever the view matrix (camera ∘ frame) changes.
+ * ecliptic, the galactic equator, equinox/solstice markers, and the pole markers.
+ * Lines on the far hemisphere are dashed.
  *
  * Paint order is split across {@link backLayer} and {@link frontLayer} so callers
  * can sandwich the Earth globe between the dashed (behind) and solid (in front)
@@ -14,9 +14,10 @@
 import { Multilink, type TReadOnlyProperty } from "scenerystack/axon";
 import { Vector3 } from "scenerystack/dot";
 import { Shape } from "scenerystack/kite";
-import { Circle, Node, Path, Text } from "scenerystack/scenery";
+import { Circle, Node, Path, Text, type TPaint } from "scenerystack/scenery";
 import { PhetFont } from "scenerystack/scenery-phet";
 import BasicCoordinatesAndSeasonsColors from "../../BasicCoordinatesAndSeasonsColors.js";
+import { OBLIQUITY_DEGREES } from "../../BasicCoordinatesAndSeasonsConstants.js";
 import { raDecToVector3 } from "../SkyCoordinates.js";
 import type { SkyProjection } from "../SkyProjection.js";
 import { addSplitSmoothPolyline, projectSplitSmoothPolyline, smallCirclePoints } from "./skyGraphics.js";
@@ -28,12 +29,22 @@ export type CelestialSphereNodeOptions = {
   celestialEquatorVisibleProperty?: TReadOnlyProperty<boolean>;
   /** Toggles the ecliptic great circle. Defaults to always visible. */
   eclipticVisibleProperty?: TReadOnlyProperty<boolean>;
+  /** Toggles the galactic-equator great circle. Defaults to always visible. */
+  galacticEquatorVisibleProperty?: TReadOnlyProperty<boolean>;
   /** Toggles the 0ʰ hour circle (RA = 0ʰ great circle). Defaults to always visible. */
   hourCircleVisibleProperty?: TReadOnlyProperty<boolean>;
   /** Toggles the RA/Dec graticule (declination circles and RA meridians). Defaults to always visible. */
   gridVisibleProperty?: TReadOnlyProperty<boolean>;
   /** Toggles the celestial-sphere silhouette outline. Defaults to always visible. */
   outlineVisibleProperty?: TReadOnlyProperty<boolean>;
+  /** Toggles the equinox/solstice labels (VE, AE, SS, WS). Defaults to always visible. */
+  equinoxesAndSolsticesVisibleProperty?: TReadOnlyProperty<boolean>;
+  /** Toggles the celestial-pole labels (NCP/SCP). Defaults to always visible. */
+  celestialPolesVisibleProperty?: TReadOnlyProperty<boolean>;
+  /** Stroke for the celestial equator. Defaults to the shared warm equator color. */
+  celestialEquatorColor?: TPaint;
+  /** Stroke for the ecliptic. Defaults to the shared ecliptic color. */
+  eclipticColor?: TPaint;
 };
 
 const NCP = new Vector3(0, 0, 1);
@@ -43,7 +54,8 @@ const HOUR_CIRCLE_POLE = new Vector3(0, 1, 0);
 const RA_ZERO = new Vector3(1, 0, 0); // RA 0ʰ on the equator, where the "0h" label sits
 const DEC_CIRCLES = [-60, -30, 30, 60]; // degrees (0 is the equator, drawn separately)
 const RA_MERIDIANS = [0, 3, 6, 9, 12, 15, 18, 21]; // hours
-const ECLIPTIC_POLE = raDecToVector3(18, 66.56); // 23.44° from the NCP
+const ECLIPTIC_POLE = raDecToVector3(18, 90 - OBLIQUITY_DEGREES); // 23.44° from the NCP
+const GALACTIC_POLE = raDecToVector3(12.8567, 27.13); // North Galactic Pole (J2000)
 const DASH = [5, 4];
 const POLE_DOT_RADIUS = 4;
 const LABEL_OFFSET = 14;
@@ -72,17 +84,22 @@ export class CelestialSphereNode extends Node {
       center: projection.center,
     });
 
-    const solid = (color: typeof BasicCoordinatesAndSeasonsColors.gridColorProperty, lineWidth: number): Path =>
-      new Path(null, { stroke: color, lineWidth });
-    const dashed = (color: typeof BasicCoordinatesAndSeasonsColors.gridColorProperty, lineWidth: number): Path =>
+    const solid = (color: TPaint, lineWidth: number): Path => new Path(null, { stroke: color, lineWidth });
+    const dashed = (color: TPaint, lineWidth: number): Path =>
       new Path(null, { stroke: color, lineWidth, lineDash: DASH, opacity: 0.6 });
+
+    const equatorColor =
+      options?.celestialEquatorColor ?? BasicCoordinatesAndSeasonsColors.celestialEquatorColorProperty;
+    const eclipticColor = options?.eclipticColor ?? BasicCoordinatesAndSeasonsColors.eclipticColorProperty;
 
     const gridFront = solid(BasicCoordinatesAndSeasonsColors.gridColorProperty, 0.75);
     const gridBack = dashed(BasicCoordinatesAndSeasonsColors.gridColorProperty, 0.75);
-    const equatorFront = solid(BasicCoordinatesAndSeasonsColors.celestialEquatorColorProperty, 1.5);
-    const equatorBack = dashed(BasicCoordinatesAndSeasonsColors.celestialEquatorColorProperty, 1.5);
-    const eclipticFront = solid(BasicCoordinatesAndSeasonsColors.eclipticColorProperty, 1.5);
-    const eclipticBack = dashed(BasicCoordinatesAndSeasonsColors.eclipticColorProperty, 1.5);
+    const equatorFront = solid(equatorColor, 1.5);
+    const equatorBack = dashed(equatorColor, 1.5);
+    const eclipticFront = solid(eclipticColor, 1.5);
+    const eclipticBack = dashed(eclipticColor, 1.5);
+    const galacticFront = solid(BasicCoordinatesAndSeasonsColors.galacticEquatorColorProperty, 1.5);
+    const galacticBack = dashed(BasicCoordinatesAndSeasonsColors.galacticEquatorColorProperty, 1.5);
 
     // The 0ʰ hour circle is grouped so a single visibility toggle hides it all.
     const hourCircleFront = solid(BasicCoordinatesAndSeasonsColors.accentColorProperty, 1.5);
@@ -107,11 +124,30 @@ export class CelestialSphereNode extends Node {
     const celestialEquatorFrontLayer = new Node({ children: [equatorFront] });
     const labels = new Node({ children: [ncpText, scpText] });
 
+    // Equinox / solstice markers.
+    const markerFont = new PhetFont(10);
+    const markerColor = BasicCoordinatesAndSeasonsColors.textColorProperty;
+    const veText = new Text("VE", { font: markerFont, fill: markerColor });
+    const aeText = new Text("AE", { font: markerFont, fill: markerColor });
+    const ssText = new Text("SS", { font: markerFont, fill: markerColor });
+    const wsText = new Text("WS", { font: markerFont, fill: markerColor });
+    const equinoxSolsticeNode = new Node({ children: [veText, aeText, ssText, wsText] });
+
     this.backLayer = new Node({
-      children: [outline, gridBack, eclipticBack, celestialEquatorBackLayer, hourCircleBackLayer],
+      children: [outline, gridBack, eclipticBack, galacticBack, celestialEquatorBackLayer, hourCircleBackLayer],
     });
     this.frontLayer = new Node({
-      children: [gridFront, eclipticFront, celestialEquatorFrontLayer, hourCircleFrontLayer, ncpDot, scpDot, labels],
+      children: [
+        gridFront,
+        eclipticFront,
+        galacticFront,
+        celestialEquatorFrontLayer,
+        hourCircleFrontLayer,
+        ncpDot,
+        scpDot,
+        labels,
+        equinoxSolsticeNode,
+      ],
     });
 
     const placeLabel = (text: Node, point: Vector3): void => {
@@ -142,6 +178,10 @@ export class CelestialSphereNode extends Node {
       eclipticFront.shape = ecliptic.front;
       eclipticBack.shape = ecliptic.back;
 
+      const galactic = projectSplitSmoothPolyline(projection, smallCirclePoints(GALACTIC_POLE, 90), true);
+      galacticFront.shape = galactic.front;
+      galacticBack.shape = galactic.back;
+
       const hourCircleSplit = projectSplitSmoothPolyline(projection, smallCirclePoints(HOUR_CIRCLE_POLE, 90), true);
       hourCircleFront.shape = hourCircleSplit.front;
       hourCircleBack.shape = hourCircleSplit.back;
@@ -154,6 +194,20 @@ export class CelestialSphereNode extends Node {
       placeLabel(scpText, SCP);
       ncpText.visible = projection.isFrontFacing(NCP);
       scpText.visible = projection.isFrontFacing(SCP);
+
+      // Equinox/solstice positions on the ecliptic.
+      const ve = raDecToVector3(0, 0); // Vernal Equinox (RA 0h, Dec 0°)
+      const ae = raDecToVector3(12, 0); // Autumnal Equinox (RA 12h, Dec 0°)
+      const ss = raDecToVector3(6, OBLIQUITY_DEGREES); // Summer Solstice
+      const ws = raDecToVector3(18, -OBLIQUITY_DEGREES); // Winter Solstice
+      placeLabel(veText, ve);
+      placeLabel(aeText, ae);
+      placeLabel(ssText, ss);
+      placeLabel(wsText, ws);
+      veText.visible = projection.isFrontFacing(ve);
+      aeText.visible = projection.isFrontFacing(ae);
+      ssText.visible = projection.isFrontFacing(ss);
+      wsText.visible = projection.isFrontFacing(ws);
     });
 
     options?.celestialEquatorVisibleProperty?.link((visible) => {
@@ -163,6 +217,10 @@ export class CelestialSphereNode extends Node {
     options?.eclipticVisibleProperty?.link((visible) => {
       eclipticFront.visible = visible;
       eclipticBack.visible = visible;
+    });
+    options?.galacticEquatorVisibleProperty?.link((visible) => {
+      galacticFront.visible = visible;
+      galacticBack.visible = visible;
     });
     options?.hourCircleVisibleProperty?.link((visible) => {
       hourCircleBackLayer.visible = visible;
@@ -177,6 +235,15 @@ export class CelestialSphereNode extends Node {
     });
     options?.labelsVisibleProperty?.link((visible) => {
       labels.visible = visible;
+    });
+    options?.equinoxesAndSolsticesVisibleProperty?.link((visible) => {
+      equinoxSolsticeNode.visible = visible;
+    });
+    options?.celestialPolesVisibleProperty?.link((visible) => {
+      ncpDot.visible = visible;
+      scpDot.visible = visible;
+      ncpText.visible = visible;
+      scpText.visible = visible;
     });
   }
 }

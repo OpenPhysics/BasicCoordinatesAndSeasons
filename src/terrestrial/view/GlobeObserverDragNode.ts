@@ -1,19 +1,31 @@
 /**
  * GlobeObserverDragNode.ts
  *
- * A transparent drag target laid over the Earth globe. Dragging it moves the
- * observer: the pointer is unprojected to a unit vector on the sphere, its
- * declination becomes the latitude, and its right ascension is converted back to
- * a geographic longitude (accounting for the globe's sidereal-time anchoring, so
- * dropping the marker on a coastline sets that coastline's longitude). Points on
- * the far hemisphere are ignored.
+ * A transparent drag target laid over the Earth globe with two pointer modes,
+ * mirroring the NAAP longLatDemo `onPressFunc`:
+ *   - plain drag                → move the observer (unproject the pointer to
+ *                                 lat/long; the far hemisphere is ignored)
+ *   - Shift-drag                → rotate the globe itself (its camera azimuth &
+ *                                 elevation), the NAAP "simple drag" spin
+ *
+ * Arrow keys nudge the observer's latitude/longitude in 5° steps, matching the
+ * flat map. The node is focusable so keyboard users reach the same controls.
  */
 
 import type { NumberProperty } from "scenerystack/axon";
 import { clamp, type Vector2 } from "scenerystack/dot";
-import { Circle, DragListener, Node } from "scenerystack/scenery";
+import { Circle, DragListener, KeyboardListener, Node } from "scenerystack/scenery";
+import { LATITUDE_RANGE, LOCATION_STEP_DEGREES } from "../../BasicCoordinatesAndSeasonsConstants.js";
+import BasicCoordinatesAndSeasonsHotkeyData from "../../common/BasicCoordinatesAndSeasonsHotkeyData.js";
 import { HOURS_PER_DAY, normalizeHours, radiansToHours, radToDeg } from "../../common/SkyCoordinates.js";
 import type { SkyProjection } from "../../common/SkyProjection.js";
+import { StringManager } from "../../i18n/StringManager.js";
+
+/** Radians of globe rotation per pixel of Shift-drag movement. */
+const GLOBE_ROTATE_SPEED = 0.01;
+
+/** Positive modulo into [0, n). */
+const mod = (value: number, n: number): number => ((value % n) + n) % n;
 
 export type GlobeObserverDragNodeOptions = {
   /** Sidereal time (hours) the globe is drawn at. The Terrestrial globe uses 0. */
@@ -28,11 +40,16 @@ export class GlobeObserverDragNode extends Node {
     options?: GlobeObserverDragNodeOptions,
   ) {
     const siderealTimeHours = options?.siderealTimeHours ?? 0;
+    const a11y = StringManager.getInstance().getTerrestrialA11yStrings();
 
     const hitTarget = new Circle(projection.radius, {
       center: projection.center,
       fill: "rgba(0,0,0,0)",
       cursor: "grab",
+      tagName: "div",
+      focusable: true,
+      accessibleName: a11y.controls.globeObserverStringProperty,
+      accessibleHelpText: a11y.controls.globeObserverHelpStringProperty,
     });
 
     super({ children: [hitTarget] });
@@ -58,9 +75,59 @@ export class GlobeObserverDragNode extends Node {
       longitudeProperty.value = clamp(longitudeDeg, longitudeProperty.range.min, longitudeProperty.range.max);
     };
 
+    // Pointer mode is locked at press time (NAAP checks the Shift key once in
+    // onPressFunc), so releasing Shift mid-drag does not flip the gesture.
+    let rotating = false;
+    let lastPoint: Vector2 | null = null;
+
     hitTarget.addInputListener(
       new DragListener({
-        drag: (event) => moveObserverTo(event.pointer.point),
+        start: (event) => {
+          const domEvent = event.domEvent as { shiftKey?: boolean } | null;
+          rotating = Boolean(domEvent?.shiftKey);
+          lastPoint = event.pointer.point.copy();
+          if (!rotating) {
+            moveObserverTo(event.pointer.point);
+          }
+        },
+        drag: (event) => {
+          if (rotating) {
+            if (!lastPoint) {
+              lastPoint = event.pointer.point.copy();
+              return;
+            }
+            const p = event.pointer.point;
+            const dx = p.x - lastPoint.x;
+            const dy = lastPoint.y - p.y; // drag up → tilt up
+            projection.rotateBy(dx * GLOBE_ROTATE_SPEED, dy * GLOBE_ROTATE_SPEED);
+            lastPoint = p.copy();
+          } else {
+            moveObserverTo(event.pointer.point);
+          }
+        },
+        end: () => {
+          rotating = false;
+          lastPoint = null;
+        },
+      }),
+    );
+
+    // Arrow keys nudge the observer's lat/long in 5° steps (left/right wrap).
+    hitTarget.addInputListener(
+      new KeyboardListener({
+        keys: [...BasicCoordinatesAndSeasonsHotkeyData.ARROW_KEYS],
+        fireOnHold: true,
+        fire: (_event, keysPressed) => {
+          if (keysPressed === "arrowLeft") {
+            longitudeProperty.value = mod(longitudeProperty.value - LOCATION_STEP_DEGREES + 180, 360) - 180;
+          } else if (keysPressed === "arrowRight") {
+            longitudeProperty.value = mod(longitudeProperty.value + LOCATION_STEP_DEGREES + 180, 360) - 180;
+          } else if (keysPressed === "arrowUp") {
+            latitudeProperty.value = LATITUDE_RANGE.constrainValue(latitudeProperty.value + LOCATION_STEP_DEGREES);
+          } else if (keysPressed === "arrowDown") {
+            latitudeProperty.value = LATITUDE_RANGE.constrainValue(latitudeProperty.value - LOCATION_STEP_DEGREES);
+          }
+        },
       }),
     );
   }

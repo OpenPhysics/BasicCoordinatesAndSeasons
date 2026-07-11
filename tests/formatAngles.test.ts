@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { formatLatitude, formatLongitude } from "../src/common/formatAngles.js";
+import { formatLatitude, formatLatitudeDMS, formatLongitude, formatLongitudeDMS } from "../src/common/formatAngles.js";
 
 describe("formatLatitude", () => {
   it("uses N/S hemisphere letters with a positive magnitude", () => {
@@ -27,5 +27,36 @@ describe("formatLongitude", () => {
 
   it("supports localized west letter (e.g. French/Spanish 'O')", () => {
     expect(formatLongitude(-96.7, 1, { north: "N", south: "S", east: "E", west: "O" })).toBe("96.7° O");
+  });
+});
+
+describe("formatLatitudeDMS", () => {
+  it("formats degrees + zero-padded minutes with a hemisphere letter", () => {
+    expect(formatLatitudeDMS(40.8)).toBe("40° 48′ N");
+    expect(formatLatitudeDMS(-33.9167)).toBe("33° 55′ S");
+    expect(formatLatitudeDMS(0)).toBe("0° 00′ N");
+  });
+
+  it("floors minutes and drops seconds (rounding to the nearest arc-second first)", () => {
+    // 40.8167° = 40° 49.002′ → 49′ (never 48′ from float noise).
+    expect(formatLatitudeDMS(40.8167)).toBe("40° 49′ N");
+    expect(formatLatitudeDMS(90)).toBe("90° 00′ N");
+  });
+
+  it("honours localized letters", () => {
+    expect(formatLatitudeDMS(-5.5, { north: "N", south: "S", east: "E", west: "O" })).toBe("5° 30′ S");
+  });
+});
+
+describe("formatLongitudeDMS", () => {
+  it("formats degrees + zero-padded minutes with a hemisphere letter", () => {
+    expect(formatLongitudeDMS(-96.6667)).toBe("96° 40′ W");
+    expect(formatLongitudeDMS(116.3833)).toBe("116° 23′ E");
+    expect(formatLongitudeDMS(0)).toBe("0° 00′ E");
+    expect(formatLongitudeDMS(-180)).toBe("180° 00′ W");
+  });
+
+  it("supports a localized west letter", () => {
+    expect(formatLongitudeDMS(-96.6667, { north: "N", south: "S", east: "E", west: "O" })).toBe("96° 40′ O");
   });
 });

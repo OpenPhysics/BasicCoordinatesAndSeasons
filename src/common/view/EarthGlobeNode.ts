@@ -154,8 +154,7 @@ export class EarthGlobeNode extends Node {
     // still read faintly on the night side. Clipped to the globe disc.
     const sunDirectionProperty = options?.sunDirectionProperty;
     const shadePath = new Path(null, {
-      fill: "#0a1626",
-      opacity: 0.55,
+      fill: BasicCoordinatesAndSeasonsColors.terminatorShadeColorProperty,
       pickable: false,
       visible: !!sunDirectionProperty,
     });

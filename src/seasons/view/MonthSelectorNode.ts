@@ -74,7 +74,9 @@ export class MonthSelectorNode extends Node {
     const labels: Text[] = monthProps.map((prop, monthIndex) => {
       const abbrevProperty = new DerivedProperty([prop], (name) => name.substring(0, 3));
       const label = new Text(abbrevProperty, { font, fill: textColor, cursor: "pointer" });
-      label.centerX = (dayToX(MONTH_START_DAYS[monthIndex]!) + dayToX(MONTH_START_DAYS[monthIndex + 1]!)) / 2;
+      const segmentStart = MONTH_START_DAYS[monthIndex] ?? 0;
+      const segmentEnd = MONTH_START_DAYS[monthIndex + 1] ?? DAYS_PER_YEAR;
+      label.centerX = (dayToX(segmentStart) + dayToX(segmentEnd)) / 2;
       label.centerY = STRIP_HEIGHT / 2;
       label.addInputListener(
         new FireListener({

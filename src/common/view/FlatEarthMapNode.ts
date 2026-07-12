@@ -130,7 +130,10 @@ const addSouthCapShorePolygonToShape = (
   height: number,
 ): void => {
   const points = polygon.map(shorePointToGeo);
-  const first = points[0] as GeoPoint;
+  const first = points[0];
+  if (!first) {
+    return; // empty polygon: nothing to stroke/fill
+  }
 
   const appendSouthCapEdge = (from: GeoPoint, to: GeoPoint): void => {
     if (crossesDateline(from, to)) {

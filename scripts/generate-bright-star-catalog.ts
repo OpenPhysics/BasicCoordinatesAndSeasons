@@ -41,32 +41,83 @@ function normalizeHours(h: number): number {
   return ((h % 24) + 24) % 24;
 }
 
-// Read and eval the catalog array literal.
+// Read and eval the catalog array literal (trusted local decompiled source; the
+// AS literal is not valid JSON — unquoted keys — so it is parsed as JS once).
 const raw = readFileSync(SOURCE, "utf-8");
 const assignment = raw.replace(/^_root\.brightStarCatalog\s*=\s*/, "").replace(/;\s*$/, "");
-// eslint-disable-next-line no-new-func
-const catalog = new Function(`return ${assignment};`)() as Array<{
+const parsed: unknown = new Function(`return ${assignment};`)();
+
+interface CatalogStar {
+  sx: number;
+  sy: number;
+  mag: number;
+}
+interface CatalogDisc {
   x: number;
   y: number;
   z: number;
   r: number;
-  discs: Array<{
-    x: number;
-    y: number;
-    z: number;
-    r: number;
-    w0: number;
-    w1: number;
-    w2: number;
-    w3: number;
-    w4: number;
-    w5: number;
-    w6: number;
-    w7: number;
-    w8: number;
-    stars: Array<{ sx: number; sy: number; mag: number }>;
-  }>;
-}>;
+  w0: number;
+  w1: number;
+  w2: number;
+  w3: number;
+  w4: number;
+  w5: number;
+  w6: number;
+  w7: number;
+  w8: number;
+  stars: CatalogStar[];
+}
+interface CatalogSuperDisc {
+  x: number;
+  y: number;
+  z: number;
+  r: number;
+  discs: CatalogDisc[];
+}
+
+const isNumber = (value: unknown): value is number => typeof value === "number";
+const isStringRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const isCatalogStar = (value: unknown): value is CatalogStar =>
+  isStringRecord(value) && isNumber(value["sx"]) && isNumber(value["sy"]) && isNumber(value["mag"]);
+
+const isCatalogDisc = (value: unknown): value is CatalogDisc =>
+  isStringRecord(value) &&
+  isNumber(value["x"]) &&
+  isNumber(value["y"]) &&
+  isNumber(value["z"]) &&
+  isNumber(value["r"]) &&
+  isNumber(value["w0"]) &&
+  isNumber(value["w1"]) &&
+  isNumber(value["w2"]) &&
+  isNumber(value["w3"]) &&
+  isNumber(value["w4"]) &&
+  isNumber(value["w5"]) &&
+  isNumber(value["w6"]) &&
+  isNumber(value["w7"]) &&
+  isNumber(value["w8"]) &&
+  Array.isArray(value["stars"]) &&
+  value["stars"].every(isCatalogStar);
+
+const isCatalog = (value: unknown): value is CatalogSuperDisc[] =>
+  Array.isArray(value) &&
+  value.every(
+    (disc) =>
+      isStringRecord(disc) &&
+      isNumber(disc["x"]) &&
+      isNumber(disc["y"]) &&
+      isNumber(disc["z"]) &&
+      isNumber(disc["r"]) &&
+      Array.isArray(disc["discs"]) &&
+      disc["discs"].every(isCatalogDisc),
+  );
+
+if (!isCatalog(parsed)) {
+  throw new Error(`Unexpected catalog shape in ${SOURCE}`);
+}
+const catalog: CatalogSuperDisc[] = parsed;
 
 interface ExtractedStar {
   raHours: number;

@@ -356,7 +356,7 @@ async function setupFfdec(version: string): Promise<void> {
     buf = Buffer.from(await res.arrayBuffer());
   } catch (err) {
     fail(
-      `Download failed: ${(err as Error).message}\n` +
+      `Download failed: ${err instanceof Error ? err.message : String(err)}\n` +
         "Download ffdec_<version>.zip manually from\n" +
         "  https://github.com/jindrapetrik/jpexs-decompiler/releases\n" +
         `then unzip it into ${rel(localFfdecDir)}/ (so ${rel(join(localFfdecDir, "ffdec.jar"))} exists),\n` +
@@ -474,4 +474,4 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => fail((err as Error).stack ?? String(err)));
+main().catch((err) => fail(err instanceof Error ? (err.stack ?? String(err)) : String(err)));

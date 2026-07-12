@@ -97,7 +97,7 @@ function createMockContext2D(): CanvasRenderingContext2D {
 // ── Web Audio mock ───────────────────────────────────────────────────────────
 class MockAudioContext {
   readonly sampleRate = 44100;
-  readonly state = "running" as AudioContextState;
+  readonly state: AudioContextState = "running";
   readonly destination = {} as AudioDestinationNode;
   createGain(): GainNode {
     return {

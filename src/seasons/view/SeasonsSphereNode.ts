@@ -78,7 +78,7 @@ export class SeasonsSphereNode extends Node {
 
     // Gold arrow from the Earth toward the Sun (NAAP's "ray"), always shown.
     const sunArrow = new ArrowNode(0, 0, 0, 0, {
-      fill: "#d8c99b",
+      fill: BasicCoordinatesAndSeasonsColors.sunRayArrowColorProperty,
       stroke: null,
       headWidth: 16,
       headHeight: 16,

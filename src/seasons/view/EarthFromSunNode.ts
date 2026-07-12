@@ -90,7 +90,7 @@ export class EarthFromSunNode extends Node {
     });
     // Observer's parallel: a red latitude circle, draggable to change the latitude.
     const latitudeCircle = new Path(null, {
-      stroke: "#ff4d4d",
+      stroke: BasicCoordinatesAndSeasonsColors.observerColorProperty,
       lineWidth: 2.5,
       cursor: "pointer",
       tagName: "div",
@@ -105,8 +105,14 @@ export class EarthFromSunNode extends Node {
     });
 
     // Rotation axis (N red / S blue), always shown so the seasonal lean reads clearly.
-    const northAxis = new Path(null, { stroke: "#ff5252", lineWidth: 2 });
-    const southAxis = new Path(null, { stroke: "#5b8dd6", lineWidth: 2 });
+    const northAxis = new Path(null, {
+      stroke: BasicCoordinatesAndSeasonsColors.earthNorthAxisColorProperty,
+      lineWidth: 2,
+    });
+    const southAxis = new Path(null, {
+      stroke: BasicCoordinatesAndSeasonsColors.earthSouthAxisColorProperty,
+      lineWidth: 2,
+    });
     const axisLayer = new Node({ children: [southAxis, northAxis] });
 
     // Reference-circle labels stacked in a column to the LEFT of the globe, each with

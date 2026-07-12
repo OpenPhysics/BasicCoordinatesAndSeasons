@@ -44,7 +44,10 @@ export class SunbeamSpreadNode extends Node {
     for (let y = cy % beamRadius; y <= height; y += beamRadius) {
       gridShape.moveTo(0, y).lineTo(width, y);
     }
-    const grid = new Path(gridShape, { stroke: "rgba(255,255,255,0.18)", lineWidth: 0.75 });
+    const grid = new Path(gridShape, {
+      stroke: BasicCoordinatesAndSeasonsColors.sunbeamGridColorProperty,
+      lineWidth: 0.75,
+    });
 
     // The beam's true cross-section (dashed circle) and its spread footprint (ellipse).
     const beamCrossSection = new Path(Shape.circle(cx, cy, beamRadius), {
@@ -53,7 +56,7 @@ export class SunbeamSpreadNode extends Node {
       lineDash: [3, 3],
     });
     const footprint = new Path(null, {
-      fill: "rgba(255,245,157,0.5)",
+      fill: BasicCoordinatesAndSeasonsColors.sunbeamFootprintColorProperty,
       stroke: BasicCoordinatesAndSeasonsColors.sunbeamColorProperty,
       lineWidth: 1.5,
     });

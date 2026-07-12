@@ -288,6 +288,36 @@ const BasicCoordinatesAndSeasonsColors = {
     default: "#fff59d",
     projector: "#fbc02d",
   }),
+
+  /** Reference grid overlaid on the top-down sunbeam-spread ground. */
+  sunbeamGridColorProperty: new ProfileColorProperty(BasicCoordinatesAndSeasonsNamespace, "sunbeamGrid", {
+    default: "rgba(255,255,255,0.18)",
+    projector: "rgba(0,0,0,0.15)",
+  }),
+
+  /** Elliptical beam footprint painted on the sunbeam-spread ground. */
+  sunbeamFootprintColorProperty: new ProfileColorProperty(BasicCoordinatesAndSeasonsNamespace, "sunbeamFootprint", {
+    default: "rgba(255,245,157,0.5)",
+    projector: "rgba(251,192,45,0.45)",
+  }),
+
+  /** Gold Sun-direction arrow on the Seasons celestial sphere (Earth → Sun). */
+  sunRayArrowColorProperty: new ProfileColorProperty(BasicCoordinatesAndSeasonsNamespace, "sunRayArrow", {
+    default: "#d8c99b",
+    projector: "#8d7a45",
+  }),
+
+  /** North half of Earth's rotation axis (red) in Seasons Earth views. */
+  earthNorthAxisColorProperty: new ProfileColorProperty(BasicCoordinatesAndSeasonsNamespace, "earthNorthAxis", {
+    default: "#ff5252",
+    projector: "#c62828",
+  }),
+
+  /** South half of Earth's rotation axis (blue) in Seasons Earth views. */
+  earthSouthAxisColorProperty: new ProfileColorProperty(BasicCoordinatesAndSeasonsNamespace, "earthSouthAxis", {
+    default: "#5b8dd6",
+    projector: "#1565c0",
+  }),
 };
 
 export default BasicCoordinatesAndSeasonsColors;

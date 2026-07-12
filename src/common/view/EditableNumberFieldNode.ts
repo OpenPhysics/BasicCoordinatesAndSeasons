@@ -162,7 +162,8 @@ export class EditableNumberFieldNode extends HBox {
       this.beginEditing();
     }
 
-    const key = (event.domEvent as KeyboardEvent | null)?.key;
+    const domEvent = event.domEvent;
+    const key = domEvent instanceof KeyboardEvent ? domEvent.key : undefined;
     if (!key) {
       return;
     }

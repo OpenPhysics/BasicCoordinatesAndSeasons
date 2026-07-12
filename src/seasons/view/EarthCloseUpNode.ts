@@ -94,8 +94,14 @@ export class EarthCloseUpNode extends Node {
       lineWidth: 0.75,
       opacity: 0.8,
     });
-    const northAxis = new Path(null, { stroke: "#ff5252", lineWidth: 2 });
-    const southAxis = new Path(null, { stroke: "#5b8dd6", lineWidth: 2 });
+    const northAxis = new Path(null, {
+      stroke: BasicCoordinatesAndSeasonsColors.earthNorthAxisColorProperty,
+      lineWidth: 2,
+    });
+    const southAxis = new Path(null, {
+      stroke: BasicCoordinatesAndSeasonsColors.earthSouthAxisColorProperty,
+      lineWidth: 2,
+    });
 
     // Sun rays from the right: parallel arrows striking the sunward limb.
     const rayLayer = new Node({

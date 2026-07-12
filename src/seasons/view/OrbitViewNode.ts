@@ -127,11 +127,11 @@ export class OrbitViewNode extends Node {
 
     // Axis drawn vertical here; the enclosing node's rotation leans it by the tilt.
     const northAxis = new Path(new Shape().moveTo(0, 0).lineTo(0, -AXIS_HALF_LENGTH), {
-      stroke: "#ff5252",
+      stroke: BasicCoordinatesAndSeasonsColors.earthNorthAxisColorProperty,
       lineWidth: 2,
     });
     const southAxis = new Path(new Shape().moveTo(0, 0).lineTo(0, AXIS_HALF_LENGTH), {
-      stroke: "#5b8dd6",
+      stroke: BasicCoordinatesAndSeasonsColors.earthSouthAxisColorProperty,
       lineWidth: 2,
     });
     const tiltedGlobe = new Node({ children: [southAxis, ocean, land, northAxis], rotation: tilt });
@@ -146,7 +146,7 @@ export class OrbitViewNode extends Node {
         .moveTo(0, -EARTH_RADIUS)
         .arc(0, 0, EARTH_RADIUS, -Math.PI / 2, Math.PI / 2, false)
         .close(),
-      { fill: "#0a1626", opacity: 0.55, pickable: false },
+      { fill: BasicCoordinatesAndSeasonsColors.terminatorShadeColorProperty, pickable: false },
     );
 
     const earth = new Node({

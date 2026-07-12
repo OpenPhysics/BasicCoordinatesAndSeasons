@@ -13,7 +13,12 @@ describe("TerrestrialModel", () => {
     expect(model.longitudeProperty.value).toBe(DEFAULT_LONGITUDE);
     expect(model.mapCenterLongitudeProperty.value).toBe(0);
     expect(model.showCitiesProperty.value).toBe(false);
-    expect(model.mapFeaturesVisibleProperty.value).toBe(false);
+    expect(model.primeMeridianVisibleProperty.value).toBe(false);
+    expect(model.meridiansVisibleProperty.value).toBe(false);
+    expect(model.parallelsVisibleProperty.value).toBe(false);
+    expect(model.dateLineVisibleProperty.value).toBe(false);
+    expect(model.geographicalLinesVisibleProperty.value).toBe(false);
+    expect(model.labelsVisibleProperty.value).toBe(false);
     expect(model.coordinateFormatProperty.value).toBe("decimal");
   });
 
@@ -23,14 +28,24 @@ describe("TerrestrialModel", () => {
     model.longitudeProperty.value = 44.5;
     model.mapCenterLongitudeProperty.value = 135;
     model.showCitiesProperty.value = true;
-    model.mapFeaturesVisibleProperty.value = true;
+    model.primeMeridianVisibleProperty.value = true;
+    model.meridiansVisibleProperty.value = true;
+    model.parallelsVisibleProperty.value = true;
+    model.dateLineVisibleProperty.value = true;
+    model.geographicalLinesVisibleProperty.value = true;
+    model.labelsVisibleProperty.value = true;
     model.coordinateFormatProperty.value = "sexagesimal";
     model.reset();
     expect(model.latitudeProperty.value).toBe(DEFAULT_LATITUDE);
     expect(model.longitudeProperty.value).toBe(DEFAULT_LONGITUDE);
     expect(model.mapCenterLongitudeProperty.value).toBe(0);
     expect(model.showCitiesProperty.value).toBe(false);
-    expect(model.mapFeaturesVisibleProperty.value).toBe(false);
+    expect(model.primeMeridianVisibleProperty.value).toBe(false);
+    expect(model.meridiansVisibleProperty.value).toBe(false);
+    expect(model.parallelsVisibleProperty.value).toBe(false);
+    expect(model.dateLineVisibleProperty.value).toBe(false);
+    expect(model.geographicalLinesVisibleProperty.value).toBe(false);
+    expect(model.labelsVisibleProperty.value).toBe(false);
     expect(model.coordinateFormatProperty.value).toBe("decimal");
   });
 

@@ -5,8 +5,10 @@ Sim-specific context for AI assistants. General SceneryStack guidance: [OpenPhys
 ## Project
 
 A three-screen SceneryStack simulation porting the NAAP **Basic Coordinates and Seasons**
-lab (astroUNL `naap/motion1`), scaffolded from `TemplateSingleSim`. **Currently a framework
-scaffold** — placeholder label + Reset All per screen; no models/physics yet.
+lab (astroUNL `naap/motion1`), scaffolded from `TemplateSingleSim`. **Fully implemented** —
+all three screens have working models, spherical-astronomy physics, interactive 3D views
+(celestial sphere, Earth globe, orbit), a bright-star catalog, and coordinate readouts. The
+port is complete and merged to `main`; treat the code as the source of truth.
 
 - **Terrestrial Coordinates** (`src/terrestrial/`) — port of the NAAP terrestrial coordinate
   explorers (`tc_flat.swf` = flat map, `tc_globe.swf` = globe): longitude and latitude on Earth.

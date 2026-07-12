@@ -9,7 +9,13 @@
  * typing a coordinate — keeps all three in sync.
  */
 
-import { DerivedProperty, NumberProperty, type TReadOnlyProperty } from "scenerystack/axon";
+import {
+  DerivedProperty,
+  NumberProperty,
+  PatternStringProperty,
+  type Property,
+  type TReadOnlyProperty,
+} from "scenerystack/axon";
 import { Vector2 } from "scenerystack/dot";
 import { HBox, Node, Rectangle, Text, VBox } from "scenerystack/scenery";
 import { PhetFont, ResetAllButton } from "scenerystack/scenery-phet";
@@ -21,6 +27,7 @@ import BasicCoordinatesAndSeasonsColors from "../../BasicCoordinatesAndSeasonsCo
 import {
   CONTROL_FONT_SIZE,
   type CoordinateFormat,
+  DEFAULT_LONGITUDE,
   type EarthMapResolution,
   MAP_PAN_ANIMATION_DURATION,
   MAP_PAN_STEP_DEGREES,
@@ -35,6 +42,7 @@ import {
 import { SIM_CHECKBOX_OPTIONS } from "../../common/BasicCoordinatesAndSeasonsControlOptions.js";
 import { BasicCoordinatesAndSeasonsPanel } from "../../common/BasicCoordinatesAndSeasonsPanel.js";
 import { formatLatitude, formatLatitudeDMS, formatLongitude, formatLongitudeDMS } from "../../common/formatAngles.js";
+import { degToRad } from "../../common/SkyCoordinates.js";
 import { SkyProjection } from "../../common/SkyProjection.js";
 import { EarthGlobeNode } from "../../common/view/EarthGlobeNode.js";
 import { EditableNumberFieldNode } from "../../common/view/EditableNumberFieldNode.js";
@@ -101,6 +109,13 @@ export class TerrestrialScreenView extends ScreenView {
           : formatLongitude(lon, 1, { north, south, east, west }),
     );
 
+    // Live spoken latitude/longitude response shared by the flat-map cursor and the
+    // globe observer marker, so keyboard users hear the coordinate as they nudge either.
+    const positionResponseProperty = new PatternStringProperty(a11y.positionResponsePatternStringProperty, {
+      latitude: latitudeLabelProperty,
+      longitude: longitudeLabelProperty,
+    });
+
     const backgroundRect = new Rectangle(0, 0, this.layoutBounds.width, this.layoutBounds.height, {
       fill: BasicCoordinatesAndSeasonsColors.backgroundColorProperty,
     });
@@ -110,14 +125,24 @@ export class TerrestrialScreenView extends ScreenView {
     // at 0, so longitude alone spins the geography.
     const siderealTimeProperty = new NumberProperty(0);
 
+    // Shared feature-visibility bundle, used by both the flat map and the globe.
+    const featureVisibility = {
+      primeMeridian: model.primeMeridianVisibleProperty,
+      meridians: model.meridiansVisibleProperty,
+      parallels: model.parallelsVisibleProperty,
+      dateLine: model.dateLineVisibleProperty,
+      geographicalLines: model.geographicalLinesVisibleProperty,
+      labels: model.labelsVisibleProperty,
+      cities: model.showCitiesProperty,
+    };
+
     // ── Flat map (left) ──────────────────────────────────────────────────────
     const mapNode = new TerrestrialMapNode(
       model.latitudeProperty,
       model.longitudeProperty,
       earthMapResolutionProperty,
       model.mapCenterLongitudeProperty,
-      model.showCitiesProperty,
-      model.mapFeaturesVisibleProperty,
+      featureVisibility,
       {
         width: MAP_WIDTH,
         height: MAP_HEIGHT,
@@ -125,6 +150,7 @@ export class TerrestrialScreenView extends ScreenView {
           longitudeLabelProperty,
           latitudeLabelProperty,
         },
+        accessibleObjectResponseProperty: positionResponseProperty,
       },
     );
     mapNode.left = this.layoutBounds.left + SCREEN_VIEW_MARGIN;
@@ -167,7 +193,9 @@ export class TerrestrialScreenView extends ScreenView {
     this.projection = new SkyProjection({
       center: new Vector2(this.layoutBounds.centerX + 240, this.layoutBounds.top + 242),
       radius: GLOBE_RADIUS,
-      azimuth: Math.PI / 2, // bring the observer's meridian (RA 0h) to the front
+      // Face the default observer's meridian. The geography is fixed at sidereal time 0,
+      // so the observer's RA equals its longitude; azimuth = π/2 − RA brings it front-center.
+      azimuth: Math.PI / 2 - degToRad(DEFAULT_LONGITUDE),
       elevation: -0.35,
     });
     const projection = this.projection;
@@ -180,18 +208,31 @@ export class TerrestrialScreenView extends ScreenView {
       earthMapResolutionProperty,
       {
         radiusRatio: 1,
+        // Fixed geography: the earth stands still and the observer marker rides at its true
+        // latitude/longitude, so dragging slides the marker freely across the globe.
+        observerAnchored: false,
         overlays: {
           cities: CITIES,
           dateLine: DATE_LINE,
           referenceCircleLatitudes: [OBLIQUITY_DEGREES, -OBLIQUITY_DEGREES, polarCircleLatitude, -polarCircleLatitude],
           showCitiesProperty: model.showCitiesProperty,
-          mapFeaturesVisibleProperty: model.mapFeaturesVisibleProperty,
+          primeMeridianVisibleProperty: model.primeMeridianVisibleProperty,
+          meridiansVisibleProperty: model.meridiansVisibleProperty,
+          parallelsVisibleProperty: model.parallelsVisibleProperty,
+          dateLineVisibleProperty: model.dateLineVisibleProperty,
+          geographicalLinesVisibleProperty: model.geographicalLinesVisibleProperty,
+          labelsVisibleProperty: model.labelsVisibleProperty,
           longitudeLabelProperty,
           latitudeLabelProperty,
         },
       },
     );
-    const globeDragNode = new GlobeObserverDragNode(projection, model.latitudeProperty, model.longitudeProperty);
+    const globeDragNode = new GlobeObserverDragNode(
+      projection,
+      model.latitudeProperty,
+      model.longitudeProperty,
+      positionResponseProperty,
+    );
     this.addChild(new Node({ children: [globeNode, globeDragNode] }));
 
     // Globe rotate buttons: ◀ rotates west, ▶ rotates east (same y as map pan buttons).
@@ -356,35 +397,65 @@ export class TerrestrialScreenView extends ScreenView {
     this.addChild(observerPanel);
 
     // ── Display-options panel (right) ────────────────────────────────────────
-    const showCitiesCheckbox = new Checkbox(
-      model.showCitiesProperty,
-      new Text(controls.showCitiesStringProperty, {
-        font: new PhetFont(CONTROL_FONT_SIZE),
-        fill: BasicCoordinatesAndSeasonsColors.textColorProperty,
-      }),
-      {
-        ...SIM_CHECKBOX_OPTIONS,
-        accessibleName: a11y.controls.showCitiesStringProperty,
-      },
-    );
+    // One checkbox per feature family, plus a "Labels" toggle that annotates the
+    // visible features and the classic "Cities" toggle.
+    const makeFeatureCheckbox = (
+      property: Property<boolean>,
+      labelProperty: TReadOnlyProperty<string>,
+      accessibleName: TReadOnlyProperty<string>,
+    ): Checkbox =>
+      new Checkbox(
+        property,
+        new Text(labelProperty, {
+          font: new PhetFont(CONTROL_FONT_SIZE),
+          fill: BasicCoordinatesAndSeasonsColors.textColorProperty,
+        }),
+        { ...SIM_CHECKBOX_OPTIONS, accessibleName },
+      );
 
-    const mapFeaturesCheckbox = new Checkbox(
-      model.mapFeaturesVisibleProperty,
-      new Text(controls.mapFeaturesStringProperty, {
-        font: new PhetFont(CONTROL_FONT_SIZE),
-        fill: BasicCoordinatesAndSeasonsColors.textColorProperty,
-      }),
-      {
-        ...SIM_CHECKBOX_OPTIONS,
-        accessibleName: a11y.controls.mapFeaturesStringProperty,
-      },
-    );
+    const featureCheckboxes = [
+      makeFeatureCheckbox(
+        model.primeMeridianVisibleProperty,
+        controls.primeMeridianStringProperty,
+        a11y.controls.primeMeridianStringProperty,
+      ),
+      makeFeatureCheckbox(
+        model.meridiansVisibleProperty,
+        controls.meridiansStringProperty,
+        a11y.controls.meridiansStringProperty,
+      ),
+      makeFeatureCheckbox(
+        model.parallelsVisibleProperty,
+        controls.parallelsStringProperty,
+        a11y.controls.parallelsStringProperty,
+      ),
+      makeFeatureCheckbox(
+        model.dateLineVisibleProperty,
+        controls.internationalDateLineStringProperty,
+        a11y.controls.dateLineStringProperty,
+      ),
+      makeFeatureCheckbox(
+        model.geographicalLinesVisibleProperty,
+        controls.geographicalLinesStringProperty,
+        a11y.controls.geographicalLinesStringProperty,
+      ),
+      makeFeatureCheckbox(
+        model.labelsVisibleProperty,
+        controls.labelsStringProperty,
+        a11y.controls.labelsStringProperty,
+      ),
+      makeFeatureCheckbox(
+        model.showCitiesProperty,
+        controls.showCitiesStringProperty,
+        a11y.controls.showCitiesStringProperty,
+      ),
+    ];
 
     const displayPanel = new BasicCoordinatesAndSeasonsPanel(
       new VBox({
         align: "left",
         spacing: 8,
-        children: [showCitiesCheckbox, mapFeaturesCheckbox],
+        children: featureCheckboxes,
       }),
     );
     displayPanel.left = observerPanel.right + 10;

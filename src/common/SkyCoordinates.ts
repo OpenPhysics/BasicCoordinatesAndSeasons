@@ -18,6 +18,16 @@
  *    +Z → North Celestial Pole, equator in the XY-plane, +X at RA 0h.
  *  Horizon frame (used as the world frame for the horizon dome):
  *    +Z → zenith, +X → North, +Y → East.
+ *
+ * ── Wired vs. reserved ────────────────────────────────────────────────────────
+ *  This lab is purely equatorial (RA/Dec): only {@link raDecToVector3} feeds the
+ *  screen views. The alt-az / horizon transforms below — `hourAngle`,
+ *  `altAzToVector3`, `equatorialToHorizontal`, `equatorialToHorizonVector`,
+ *  `horizontalToEquatorial`, `altitudeAtHourAngle`, `declinationBand` — are RESERVED:
+ *  correct and unit-tested, but not yet used by any screen (NAAP's Basic Coordinates
+ *  lab has no horizon view; that is the sibling Rotating Sky / motion2 lab). They are
+ *  kept as a ready reference API should a horizon/alt-az view be added. Azimuth
+ *  convention: measured from North (0°) increasing through East, matching NAAP.
  */
 
 import { Vector3 } from "scenerystack/dot";

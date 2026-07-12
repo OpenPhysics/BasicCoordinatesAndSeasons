@@ -21,6 +21,7 @@ import { type EarthShorePoint, getEarthShorePolygons } from "../../common/model/
 import { degToRad, normalizeDegrees, radToDeg } from "../../common/SkyCoordinates.js";
 import { SkyProjection } from "../../common/SkyProjection.js";
 import { addFrontHemisphereSphericalPolygon } from "../../common/view/skyGraphics.js";
+import { speakValueOnFocus } from "../../common/view/speakValueOnFocus.js";
 import type { SeasonsModel } from "../model/SeasonsModel.js";
 
 export type OrbitViewNodeOptions = {
@@ -29,6 +30,8 @@ export type OrbitViewNodeOptions = {
   foreshorten?: number;
   accessibleName: TReadOnlyProperty<string>;
   accessibleHelpText?: TReadOnlyProperty<string>;
+  /** Live date response spoken when a keyboard user nudges Earth around its orbit. */
+  accessibleObjectResponseProperty?: TReadOnlyProperty<string>;
   /** Localized season labels at λ☉ = 0/90/180/270 (equinox/solstice points). */
   seasonLabels: { marchEquinox: string; juneSolstice: string; septemberEquinox: string; decemberSolstice: string };
 };
@@ -159,6 +162,11 @@ export class OrbitViewNode extends Node {
     });
 
     super({ children: [orbitPath, sun, labels, earth] });
+
+    // Speak the date to screen readers as a keyboard user nudges Earth around its orbit.
+    if (options.accessibleObjectResponseProperty) {
+      speakValueOnFocus(earth, options.accessibleObjectResponseProperty);
+    }
 
     Multilink.multilink([model.sunEclipticLongitudeProperty], (lambda) => {
       const position = earthPosition(lambda);

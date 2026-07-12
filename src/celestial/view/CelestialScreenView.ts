@@ -10,8 +10,8 @@
  */
 
 import type { TReadOnlyProperty } from "scenerystack/axon";
-import { BooleanProperty } from "scenerystack/axon";
-import { Vector2 } from "scenerystack/dot";
+import { BooleanProperty, DerivedProperty, PatternStringProperty } from "scenerystack/axon";
+import { toFixed, Vector2 } from "scenerystack/dot";
 import { HBox, Node, Rectangle, Text, VBox } from "scenerystack/scenery";
 import { PhetFont, ResetAllButton } from "scenerystack/scenery-phet";
 import type { ScreenViewOptions } from "scenerystack/sim";
@@ -69,6 +69,13 @@ export class CelestialScreenView extends ScreenView {
       }),
     );
 
+    // Live spoken RA/Dec response shared by the flat-map star and the sphere guide
+    // star, so keyboard users hear the coordinate as they nudge either one.
+    const positionResponseProperty = new PatternStringProperty(a11y.positionResponsePatternStringProperty, {
+      ra: new DerivedProperty([model.starRaProperty], (ra) => toFixed(ra, 1)),
+      dec: new DerivedProperty([model.starDecProperty], (dec) => toFixed(dec, 1)),
+    });
+
     // ── Flat sky map (left) ──────────────────────────────────────────────────
     const flatMap = new FlatSkyMapNode(
       model.starRaProperty,
@@ -85,6 +92,7 @@ export class CelestialScreenView extends ScreenView {
         height: MAP_HEIGHT,
         accessibleName: a11y.controls.flatSkyMapStarStringProperty,
         accessibleHelpText: a11y.controls.flatSkyMapStarHelpStringProperty,
+        accessibleObjectResponseProperty: positionResponseProperty,
       },
     );
     flatMap.left = this.layoutBounds.left + SCREEN_VIEW_MARGIN + 10;
@@ -146,6 +154,7 @@ export class CelestialScreenView extends ScreenView {
       visibleProperty: new BooleanProperty(true),
       accessibleNameProperty: a11y.controls.guideStarStringProperty,
       accessibleHelpTextProperty: a11y.controls.guideStarHelpStringProperty,
+      accessibleObjectResponseProperty: positionResponseProperty,
     });
 
     // Transparent hit target behind the sphere content: drags here rotate the

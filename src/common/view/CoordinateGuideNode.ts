@@ -21,6 +21,7 @@ import BasicCoordinatesAndSeasonsHotkeyData from "../BasicCoordinatesAndSeasonsH
 import { normalizeHours, raDecToVector3, radiansToHours, radToDeg } from "../SkyCoordinates.js";
 import type { SkyProjection } from "../SkyProjection.js";
 import { projectSplitPolyline, smallCirclePoints } from "./skyGraphics.js";
+import { speakValueOnFocus } from "./speakValueOnFocus.js";
 import { createStarShape } from "./starGraphics.js";
 
 export type CoordinateGuideNodeOptions = {
@@ -34,6 +35,8 @@ export type CoordinateGuideNodeOptions = {
   accessibleNameProperty: TReadOnlyProperty<string>;
   /** Accessible help text describing how to operate the guide star. */
   accessibleHelpTextProperty?: TReadOnlyProperty<string>;
+  /** Live RA/Dec response spoken when a keyboard user nudges the guide star. */
+  accessibleObjectResponseProperty?: TReadOnlyProperty<string>;
 };
 
 const NCP = new Vector3(0, 0, 1);
@@ -122,6 +125,11 @@ export class CoordinateGuideNode extends Node {
         },
       }),
     );
+
+    // Speak the guide star's RA/Dec to screen readers as a keyboard user nudges it.
+    if (options.accessibleObjectResponseProperty) {
+      speakValueOnFocus(starDot, options.accessibleObjectResponseProperty);
+    }
 
     this.backLayer = new Node({ children: [raBack, decBack] });
     this.frontLayer = new Node({ children: [raFront, decFront, starDot] });

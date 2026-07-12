@@ -37,6 +37,7 @@ import {
   addFrontHemisphereSphericalPolygon,
   smallCirclePoints,
 } from "../../common/view/skyGraphics.js";
+import { speakValueOnFocus } from "../../common/view/speakValueOnFocus.js";
 import { StringManager } from "../../i18n/StringManager.js";
 import type { SeasonsModel } from "../model/SeasonsModel.js";
 
@@ -44,6 +45,8 @@ export type EarthFromSunNodeOptions = {
   radius: number;
   accessibleName: TReadOnlyProperty<string>;
   accessibleHelpText?: TReadOnlyProperty<string>;
+  /** Live latitude response spoken when a keyboard user nudges the observer circle. */
+  accessibleObjectResponseProperty?: TReadOnlyProperty<string>;
 };
 
 const NCP = new Vector3(0, 0, 1);
@@ -149,6 +152,11 @@ export class EarthFromSunNode extends Node {
     latitudeCircle.clipArea = clip;
 
     super({ children: [disc, landPath, gridPath, latitudeCircle, axisLayer, subsolarDot, labelsLayer] });
+
+    // Speak the observer's latitude to screen readers as a keyboard user nudges the circle.
+    if (options.accessibleObjectResponseProperty) {
+      speakValueOnFocus(latitudeCircle, options.accessibleObjectResponseProperty);
+    }
 
     const project = (v: Vector3): Vector2 => projection.project(v);
     const resolution = new Property(DEFAULT_EARTH_MAP_RESOLUTION);

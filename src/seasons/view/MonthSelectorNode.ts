@@ -27,6 +27,7 @@ import BasicCoordinatesAndSeasonsColors from "../../BasicCoordinatesAndSeasonsCo
 import { CONTROL_FONT_SIZE } from "../../BasicCoordinatesAndSeasonsConstants.js";
 import BasicCoordinatesAndSeasonsHotkeyData from "../../common/BasicCoordinatesAndSeasonsHotkeyData.js";
 import { eclipticLongitudeForDayOfYear, firstDayOfYearForMonth } from "../../common/SunPosition.js";
+import { speakValueOnFocus } from "../../common/view/speakValueOnFocus.js";
 import { StringManager } from "../../i18n/StringManager.js";
 import type { SeasonsModel } from "../model/SeasonsModel.js";
 
@@ -38,7 +39,7 @@ const STRIP_HEIGHT = CONTROL_FONT_SIZE + 6;
 const DAY_STEP = 1;
 
 export class MonthSelectorNode extends Node {
-  public constructor(model: SeasonsModel) {
+  public constructor(model: SeasonsModel, dateResponseProperty?: TReadOnlyProperty<string>) {
     const controls = StringManager.getInstance().getControls();
     const months = controls.months;
     const monthProps: TReadOnlyProperty<string>[] = [
@@ -107,6 +108,11 @@ export class MonthSelectorNode extends Node {
     const hitStrip = new Rectangle(0, 0, STRIP_WIDTH, STRIP_HEIGHT, { fill: "rgba(0,0,0,0)", cursor: "ew-resize" });
 
     super({ children: [hitStrip, ticks, labelsRow, marker] });
+
+    // Speak the date to screen readers as a keyboard user scrubs the marker.
+    if (dateResponseProperty) {
+      speakValueOnFocus(marker, dateResponseProperty);
+    }
 
     // Keep the marker on the current date.
     Multilink.multilink([model.dayOfYearProperty, model.monthDayProperty], (day, { monthIndex }) => {

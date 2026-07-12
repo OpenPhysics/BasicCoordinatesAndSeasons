@@ -23,6 +23,7 @@ import { degToRad, raDecToVector3, radToDeg } from "../../common/SkyCoordinates.
 import { SkyProjection } from "../../common/SkyProjection.js";
 import { StickFigureNode } from "../../common/view/StickFigureNode.js";
 import { addFrontHemisphereSphericalPolygon } from "../../common/view/skyGraphics.js";
+import { speakValueOnFocus } from "../../common/view/speakValueOnFocus.js";
 import { StringManager } from "../../i18n/StringManager.js";
 import type { SeasonsModel } from "../model/SeasonsModel.js";
 
@@ -44,6 +45,8 @@ export type EarthCloseUpNodeOptions = {
   radius: number;
   accessibleName?: TReadOnlyProperty<string>;
   accessibleHelpText?: TReadOnlyProperty<string>;
+  /** Live latitude response spoken when a keyboard user nudges the observer. */
+  accessibleObjectResponseProperty?: TReadOnlyProperty<string>;
 };
 
 const clampLatitude = (lat: number): number => Math.max(LATITUDE_RANGE.min, Math.min(LATITUDE_RANGE.max, lat));
@@ -157,6 +160,11 @@ export class EarthCloseUpNode extends Node {
     super({
       children: [earth, land, night, grid, southAxis, northAxis, rayLayer, subsolarDot, labelsLayer, observer],
     });
+
+    // Speak the observer's latitude to screen readers as a keyboard user nudges it.
+    if (options.accessibleObjectResponseProperty) {
+      speakValueOnFocus(observer, options.accessibleObjectResponseProperty);
+    }
 
     // Drive the side camera from the Sun direction: the Sun sits at the right limb
     // (screen-right = Sun), the ecliptic pole is up, so continents turn with the date

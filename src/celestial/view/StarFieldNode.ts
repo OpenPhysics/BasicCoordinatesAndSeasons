@@ -4,8 +4,9 @@
  * Renders the NAAP bright-star catalog (~4,100 stars, mag ≤ 5.8) as dots on the
  * celestial sphere. Front-facing stars (depth ≥ 0) are drawn solid in
  * {@link frontLayer}; back-facing stars are drawn dim in {@link backLayer} so the
- * transparent sphere reads as 3-D. Star radius scales with brightness
- * (brighter = larger), matching the NAAP convention `10 × (7 − mag)`.
+ * transparent sphere reads as 3-D. Star radius scales linearly with brightness
+ * (brighter = larger) via {@link magToRadius}, floored so the faintest stars stay
+ * visible — a compact rescaling of NAAP's brighter-is-bigger convention.
  *
  * Re-projects whenever the view matrix (camera ∘ frame) changes, using the same
  * `projectWithDepth` pipeline as {@link CelestialSphereNode}.

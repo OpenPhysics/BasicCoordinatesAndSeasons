@@ -1,127 +1,124 @@
 /**
  * GlobeObserverDragNode.ts
  *
- * A transparent drag target laid over the Earth globe with two pointer modes,
- * mirroring the NAAP longLatDemo `onPressFunc`:
- *   - plain drag                → move the observer (unproject the pointer to
- *                                 lat/long; the far hemisphere is ignored)
- *   - Shift-drag                → rotate the globe itself (its camera azimuth &
- *                                 elevation), the NAAP "simple drag" spin
+ * Pointer + keyboard interaction for the fixed-geography Earth globe, built on the
+ * same split as the Celestial Sphere screen (background rotates, marker moves):
  *
- * Arrow keys nudge the observer's latitude/longitude in 5° steps, matching the
- * flat map. The node is focusable so keyboard users reach the same controls.
+ *   - Background disc → rotate the globe's camera (plain drag / arrow keys, plus
+ *     Alt-drag to spin about the vertical axis). This is the shared
+ *     {@link attachSkyCameraInteraction} used by the celestial sphere.
+ *   - Observer marker (a small transparent target riding on the observer dot) →
+ *     move the observer. Because the geography stands still (EarthGlobeNode
+ *     `observerAnchored: false`), the marker can snap straight to the *absolute*
+ *     unprojected pointer position and follow the cursor freely in both longitude
+ *     and latitude — exactly like the celestial-sphere guide star.
+ *
+ * The marker sits on top of the background, so pressing it moves the observer while
+ * pressing anywhere else rotates the globe. It is disabled (falls through to the
+ * background) whenever the observer is on the far side of the globe.
+ *
+ * Assumes the geography is pinned at sidereal time 0 (as the Terrestrial screen
+ * sets), so the observer's world right ascension equals its longitude.
  */
 
-import type { NumberProperty } from "scenerystack/axon";
-import { clamp, type Vector2 } from "scenerystack/dot";
+import { Multilink, type NumberProperty, type TReadOnlyProperty } from "scenerystack/axon";
+import { clamp } from "scenerystack/dot";
 import { Circle, DragListener, KeyboardListener, Node } from "scenerystack/scenery";
 import { LATITUDE_RANGE, LOCATION_STEP_DEGREES } from "../../BasicCoordinatesAndSeasonsConstants.js";
 import BasicCoordinatesAndSeasonsHotkeyData from "../../common/BasicCoordinatesAndSeasonsHotkeyData.js";
-import { HOURS_PER_DAY, normalizeHours, radiansToHours, radToDeg } from "../../common/SkyCoordinates.js";
+import { HOURS_PER_DAY, raDecToVector3, radiansToHours, radToDeg } from "../../common/SkyCoordinates.js";
 import type { SkyProjection } from "../../common/SkyProjection.js";
+import { attachSkyCameraInteraction } from "../../common/view/attachSkyCameraInteraction.js";
+import { speakValueOnFocus } from "../../common/view/speakValueOnFocus.js";
 import { StringManager } from "../../i18n/StringManager.js";
 
-/** Radians of globe rotation per pixel of Shift-drag movement. */
-const GLOBE_ROTATE_SPEED = 0.01;
+const DEGREES_PER_HOUR = 360 / HOURS_PER_DAY;
+
+/** Radius (px) of the transparent grab target over the observer dot. */
+const MARKER_GRAB_RADIUS = 12;
 
 /** Positive modulo into [0, n). */
 const mod = (value: number, n: number): number => ((value % n) + n) % n;
 
-export type GlobeObserverDragNodeOptions = {
-  /** Sidereal time (hours) the globe is drawn at. The Terrestrial globe uses 0. */
-  siderealTimeHours?: number;
-};
+/** Wrap a longitude into [−180, 180). */
+const wrapLongitude = (deg: number): number => mod(deg + 180, 360) - 180;
 
 export class GlobeObserverDragNode extends Node {
   public constructor(
     projection: SkyProjection,
     latitudeProperty: NumberProperty,
     longitudeProperty: NumberProperty,
-    options?: GlobeObserverDragNodeOptions,
+    accessibleObjectResponseProperty?: TReadOnlyProperty<string>,
   ) {
-    const siderealTimeHours = options?.siderealTimeHours ?? 0;
     const a11y = StringManager.getInstance().getTerrestrialA11yStrings();
 
-    const hitTarget = new Circle(projection.radius, {
+    // Background: the whole globe disc rotates the camera (plain drag / arrows / Alt-drag).
+    const cameraTarget = new Circle(projection.radius, {
       center: projection.center,
       fill: "rgba(0,0,0,0)",
       cursor: "grab",
+    });
+    attachSkyCameraInteraction(cameraTarget, {
+      projection,
+      accessibleNameProperty: a11y.controls.globeOrientationStringProperty,
+      accessibleHelpTextProperty: a11y.controls.globeOrientationHelpStringProperty,
+    });
+
+    // Marker: a transparent grab target that tracks the observer dot and moves the
+    // observer. Sits above the background so pressing it moves the observer.
+    const markerTarget = new Circle(MARKER_GRAB_RADIUS, {
+      fill: "rgba(0,0,0,0)",
+      cursor: "pointer",
       tagName: "div",
       focusable: true,
       accessibleName: a11y.controls.globeObserverStringProperty,
       accessibleHelpText: a11y.controls.globeObserverHelpStringProperty,
     });
 
-    super({ children: [hitTarget] });
+    super({ children: [cameraTarget, markerTarget] });
 
-    const moveObserverTo = (globalPoint: Vector2): void => {
-      const parentPoint = this.globalToParentPoint(globalPoint);
-      // Ignore drags that fall outside the projected disc (they clamp to the limb).
-      if (parentPoint.distance(projection.center) > projection.radius) {
-        return;
-      }
-      const v = projection.unproject(parentPoint);
-      const latitudeDeg = radToDeg(Math.asin(clamp(v.z, -1, 1)));
-      const raHours = normalizeHours(radiansToHours(Math.atan2(v.y, v.x)));
+    // Keyboard should reach the observer before the globe-orientation control.
+    this.pdomOrder = [markerTarget, cameraTarget];
 
-      // Geography is anchored at GST = siderealTime − longitude/15 (hours). A point
-      // at right ascension `raHours` therefore has geographic longitude
-      // L = (raHours − GST) · 15°, which we normalize into [−180, 180).
-      const gstHours = siderealTimeHours - longitudeProperty.value / (360 / HOURS_PER_DAY);
-      const rawLongitude = (raHours - gstHours) * (360 / HOURS_PER_DAY);
-      const longitudeDeg = ((((rawLongitude + 180) % 360) + 360) % 360) - 180;
+    // Speak the observer's latitude/longitude to screen readers as a keyboard user
+    // nudges the marker.
+    if (accessibleObjectResponseProperty) {
+      speakValueOnFocus(markerTarget, accessibleObjectResponseProperty);
+    }
 
-      latitudeProperty.value = clamp(latitudeDeg, latitudeProperty.range.min, latitudeProperty.range.max);
-      longitudeProperty.value = clamp(longitudeDeg, longitudeProperty.range.min, longitudeProperty.range.max);
-    };
+    // Keep the marker over the observer dot, and let the pointer fall through to the
+    // background whenever the observer is on the far side (matching EarthGlobeNode's
+    // front-hemisphere cull of the dot). Sidereal time is 0, so RA = longitude.
+    Multilink.multilink([projection.viewMatrixProperty, latitudeProperty, longitudeProperty], (_m, lat, lon) => {
+      const observerRaHours = lon / DEGREES_PER_HOUR;
+      const { point, depth } = projection.projectWithDepth(raDecToVector3(observerRaHours, lat));
+      markerTarget.center = point;
+      markerTarget.pickable = depth >= 0;
+    });
 
-    // Pointer mode is locked at press time (NAAP checks the Shift key once in
-    // onPressFunc), so releasing Shift mid-drag does not flip the gesture.
-    let rotating = false;
-    let lastPoint: Vector2 | null = null;
-
-    hitTarget.addInputListener(
+    // Marker drag → observer position. The geography is fixed, so the point under the
+    // pointer never moves and the marker can follow the cursor absolutely; unproject
+    // clamps off-disc points to the limb, so no null-check is needed.
+    markerTarget.addInputListener(
       new DragListener({
-        start: (event) => {
-          const domEvent = event.domEvent as { shiftKey?: boolean } | null;
-          rotating = Boolean(domEvent?.shiftKey);
-          lastPoint = event.pointer.point.copy();
-          if (!rotating) {
-            moveObserverTo(event.pointer.point);
-          }
-        },
         drag: (event) => {
-          if (rotating) {
-            if (!lastPoint) {
-              lastPoint = event.pointer.point.copy();
-              return;
-            }
-            const p = event.pointer.point;
-            const dx = p.x - lastPoint.x;
-            const dy = lastPoint.y - p.y; // drag up → tilt up
-            projection.rotateBy(dx * GLOBE_ROTATE_SPEED, dy * GLOBE_ROTATE_SPEED);
-            lastPoint = p.copy();
-          } else {
-            moveObserverTo(event.pointer.point);
-          }
-        },
-        end: () => {
-          rotating = false;
-          lastPoint = null;
+          const v = projection.unproject(this.globalToParentPoint(event.pointer.point));
+          longitudeProperty.value = wrapLongitude(radiansToHours(Math.atan2(v.y, v.x)) * DEGREES_PER_HOUR);
+          latitudeProperty.value = LATITUDE_RANGE.constrainValue(radToDeg(Math.asin(clamp(v.z, -1, 1))));
         },
       }),
     );
 
     // Arrow keys nudge the observer's lat/long in 5° steps (left/right wrap).
-    hitTarget.addInputListener(
+    markerTarget.addInputListener(
       new KeyboardListener({
         keys: [...BasicCoordinatesAndSeasonsHotkeyData.ARROW_KEYS],
         fireOnHold: true,
         fire: (_event, keysPressed) => {
           if (keysPressed === "arrowLeft") {
-            longitudeProperty.value = mod(longitudeProperty.value - LOCATION_STEP_DEGREES + 180, 360) - 180;
+            longitudeProperty.value = wrapLongitude(longitudeProperty.value - LOCATION_STEP_DEGREES);
           } else if (keysPressed === "arrowRight") {
-            longitudeProperty.value = mod(longitudeProperty.value + LOCATION_STEP_DEGREES + 180, 360) - 180;
+            longitudeProperty.value = wrapLongitude(longitudeProperty.value + LOCATION_STEP_DEGREES);
           } else if (keysPressed === "arrowUp") {
             latitudeProperty.value = LATITUDE_RANGE.constrainValue(latitudeProperty.value + LOCATION_STEP_DEGREES);
           } else if (keysPressed === "arrowDown") {

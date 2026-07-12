@@ -14,7 +14,13 @@
  * instruction caption and in-panel readouts, matching the original.
  */
 
-import { DerivedProperty, Multilink, type PhetioProperty, type TReadOnlyProperty } from "scenerystack/axon";
+import {
+  DerivedProperty,
+  Multilink,
+  PatternStringProperty,
+  type PhetioProperty,
+  type TReadOnlyProperty,
+} from "scenerystack/axon";
 import { toFixed, Vector2 } from "scenerystack/dot";
 import { Shape } from "scenerystack/kite";
 import { HBox, Node, Rectangle, Text, type TPaint, VBox } from "scenerystack/scenery";
@@ -118,6 +124,18 @@ export class SeasonsScreenView extends ScreenView {
 
     const dateProperty = createSeasonsDateProperty(model);
 
+    // Live spoken responses so keyboard users hear the result of dragging Earth
+    // around its orbit / scrubbing the date, and of moving the observer's latitude.
+    const dateResponseProperty = new PatternStringProperty(a11y.dateResponsePatternStringProperty, {
+      date: dateProperty,
+    });
+    const latitudeResponseProperty = new PatternStringProperty(a11y.latitudeResponsePatternStringProperty, {
+      latitude: new DerivedProperty(
+        [controls.northStringProperty, controls.southStringProperty, model.latitudeProperty],
+        (north, south, lat) => `${toFixed(Math.abs(lat), 1)}° ${lat >= 0 ? north : south}`,
+      ),
+    });
+
     // ── Left stage: orbit view ⇄ celestial sphere ────────────────────────────
     const left = makeStage(LEFT_STAGE);
 
@@ -125,6 +143,7 @@ export class SeasonsScreenView extends ScreenView {
       radius: 172,
       accessibleName: a11y.controls.earthStringProperty,
       accessibleHelpText: a11y.controls.earthHelpStringProperty,
+      accessibleObjectResponseProperty: dateResponseProperty,
       seasonLabels: {
         marchEquinox: controls.marchEquinoxStringProperty.value,
         juneSolstice: controls.juneSolsticeStringProperty.value,
@@ -219,12 +238,14 @@ export class SeasonsScreenView extends ScreenView {
       radius: 80,
       accessibleName: controls.observerLatitudeStringProperty,
       accessibleHelpText: controls.dragLatitudeHintStringProperty,
+      accessibleObjectResponseProperty: latitudeResponseProperty,
     });
     earthCloseUp.center = earthCenter;
     const earthFromSun = new EarthFromSunNode(model, {
       radius: 82,
       accessibleName: controls.observerLatitudeStringProperty,
       accessibleHelpText: controls.dragLatitudeHintStringProperty,
+      accessibleObjectResponseProperty: latitudeResponseProperty,
     });
     earthFromSun.center = earthCenter;
 
@@ -303,7 +324,7 @@ export class SeasonsScreenView extends ScreenView {
     viewControlPanel.bottom = this.layoutBounds.maxY - SCREEN_VIEW_MARGIN + 6;
 
     // ── Bottom band: month scrubber + date + play/pause with speed ───────────
-    const monthSelector = new MonthSelectorNode(model);
+    const monthSelector = new MonthSelectorNode(model, dateResponseProperty);
     const dateText = new Text(dateProperty, { font: new PhetFont(CONTROL_FONT_SIZE + 1), fill: textColor });
     const timeControl = new TimeControlNode(model.timer.isPlayingProperty, {
       timeSpeedProperty: model.timer.timeSpeedProperty,
@@ -379,6 +400,7 @@ export class SeasonsScreenView extends ScreenView {
           earthCloseUp,
           earthFromSun,
           sunbeamRadio.group,
+          monthSelector,
           timeControl,
           latitudeControl,
           resetAllButton,

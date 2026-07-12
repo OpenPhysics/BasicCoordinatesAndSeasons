@@ -13,9 +13,10 @@
  *   Seasons                 — the Sun at the centre of Earth's tilted-axis orbit.
  */
 import { Shape } from "scenerystack/kite";
-import { Circle, Line, Node, Path, Rectangle } from "scenerystack/scenery";
+import { Circle, Line, Node, Path, RadialGradient, Rectangle } from "scenerystack/scenery";
 import { ScreenIcon } from "scenerystack/sim";
 import BasicCoordinatesAndSeasonsColors from "../BasicCoordinatesAndSeasonsColors.js";
+import { getEarthShorePolygons } from "./model/EarthShoreData.js";
 import { createStarShape } from "./view/starGraphics.js";
 
 // ── Canvas dimensions (PhET standard icon size) ───────────────────────────────
@@ -44,7 +45,86 @@ function starAt(x: number, y: number, outerRadius: number): Path {
   });
 }
 
-/** Earth globe: ocean disc, a simplified land mass clipped to the disc, and an outline. */
+// Orthographic view centred on the prime-meridian region rotated east by this
+// longitude, so the visible hemisphere shows Africa, Europe and the Middle East —
+// the most recognizable face of the Earth. Viewing latitude is 0 so the globe's
+// grid parallels/meridians read as the simple horizontal/vertical ellipses below.
+const CONTINENT_VIEW_LON = (20 * Math.PI) / 180;
+const CONTINENT_COS_LON = Math.cos(CONTINENT_VIEW_LON);
+const CONTINENT_SIN_LON = Math.sin(CONTINENT_VIEW_LON);
+
+/** Depth toward the viewer of a unit-sphere point (positive on the visible hemisphere). */
+function continentDepth(x: number, y: number): number {
+  return CONTINENT_COS_LON * x + CONTINENT_SIN_LON * y;
+}
+
+/**
+ * Real coastlines (NAAP low-resolution land polygons on the unit sphere)
+ * orthographically projected onto the icon globe, centred on Africa/Europe.
+ *
+ * Each land polygon is first Sutherland–Hodgman clipped to the visible hemisphere
+ * (the half-space facing the viewer), interpolating a point onto the limb wherever an
+ * edge crosses behind the globe, so filled land ends cleanly at the horizon instead of
+ * folding the far side back over the disc. The result is clipped to the disc by the caller.
+ */
+function continentsShape(centerX: number, centerY: number, radius: number): Shape {
+  const shape = new Shape();
+
+  for (const polygon of getEarthShorePolygons("low")) {
+    // Clip the closed polygon to the front hemisphere, collecting visible unit-sphere
+    // vertices plus limb crossings where an edge passes behind the globe.
+    const clipped: Array<[number, number, number]> = [];
+    const crossing = (
+      a: { x: number; y: number; z: number },
+      b: { x: number; y: number; z: number },
+      da: number,
+      db: number,
+    ): [number, number, number] => {
+      const t = da / (da - db);
+      const cx = a.x + t * (b.x - a.x);
+      const cy = a.y + t * (b.y - a.y);
+      const cz = a.z + t * (b.z - a.z);
+      const len = Math.hypot(cx, cy, cz) || 1;
+      return [cx / len, cy / len, cz / len];
+    };
+    // Walk each edge from the previous vertex, starting with the wrap-around edge
+    // from the last vertex, so the closed loop is fully covered.
+    let from = polygon[polygon.length - 1];
+    if (!from) {
+      continue;
+    }
+    for (const to of polygon) {
+      const da = continentDepth(from.x, from.y);
+      const db = continentDepth(to.x, to.y);
+      if (db >= 0) {
+        if (da < 0) {
+          clipped.push(crossing(from, to, da, db));
+        }
+        clipped.push([to.x, to.y, to.z]);
+      } else if (da >= 0) {
+        clipped.push(crossing(from, to, da, db));
+      }
+      from = to;
+    }
+    if (clipped.length < 3) {
+      continue;
+    }
+
+    clipped.forEach(([x, y, z], i) => {
+      const px = centerX + radius * (-CONTINENT_SIN_LON * x + CONTINENT_COS_LON * y);
+      const py = centerY - radius * z;
+      if (i === 0) {
+        shape.moveTo(px, py);
+      } else {
+        shape.lineTo(px, py);
+      }
+    });
+    shape.close();
+  }
+  return shape;
+}
+
+/** Earth globe: ocean disc, real projected continents clipped to the disc, and an outline. */
 function earthGlobe(centerX: number, centerY: number, radius: number): Node {
   const disc = new Circle(radius, {
     fill: BasicCoordinatesAndSeasonsColors.earthOceanColorProperty,
@@ -53,30 +133,9 @@ function earthGlobe(centerX: number, centerY: number, radius: number): Node {
     centerX,
     centerY,
   });
-  const land = new Path(
-    new Shape()
-      .moveTo(centerX - radius * 0.55, centerY - radius * 0.15)
-      .quadraticCurveTo(
-        centerX - radius * 0.1,
-        centerY - radius * 0.75,
-        centerX + radius * 0.45,
-        centerY - radius * 0.35,
-      )
-      .quadraticCurveTo(
-        centerX + radius * 0.75,
-        centerY + radius * 0.05,
-        centerX + radius * 0.35,
-        centerY + radius * 0.55,
-      )
-      .quadraticCurveTo(
-        centerX - radius * 0.05,
-        centerY + radius * 0.8,
-        centerX - radius * 0.55,
-        centerY + radius * 0.35,
-      )
-      .close(),
-    { fill: BasicCoordinatesAndSeasonsColors.earthLandColorProperty },
-  );
+  const land = new Path(continentsShape(centerX, centerY, radius), {
+    fill: BasicCoordinatesAndSeasonsColors.earthLandColorProperty,
+  });
   land.clipArea = Shape.circle(centerX, centerY, radius);
   return new Node({ children: [disc, land] });
 }
@@ -110,6 +169,27 @@ function globeGrid(centerX: number, centerY: number, radius: number, lineWidth: 
     children.push(path);
   }
   return new Node({ children });
+}
+
+/**
+ * A translucent radial-gradient overlay that turns a flat disc into a lit sphere:
+ * a highlight offset toward the top-left and a shadow gathering at the lower-right.
+ * Neutral black/white so it reads correctly over any ocean/land colour or profile.
+ */
+function sphereShading(centerX: number, centerY: number, radius: number): Node {
+  const gradient = new RadialGradient(
+    centerX - radius * 0.35,
+    centerY - radius * 0.35,
+    radius * 0.1,
+    centerX,
+    centerY,
+    radius * 1.15,
+  )
+    .addColorStop(0, "rgba(255,255,255,0.55)")
+    .addColorStop(0.45, "rgba(255,255,255,0.0)")
+    .addColorStop(0.85, "rgba(0,0,0,0.12)")
+    .addColorStop(1, "rgba(0,0,0,0.4)");
+  return new Circle(radius, { fill: gradient, centerX, centerY });
 }
 
 /** Celestial sphere with equator, ecliptic, meridian, RA/Dec guides and a star. */
@@ -171,14 +251,42 @@ export function createTerrestrialIcon(): ScreenIcon {
   const radius = 138;
   const globe = earthGlobe(CX, CY, radius);
   const grid = globeGrid(CX, CY, radius, 2);
-  const observer = new Circle(9, {
+  const shading = sphereShading(CX, CY, radius);
+  const clip = Shape.circle(CX, CY, radius);
+
+  // The observer's location, and the latitude parallel + longitude meridian that
+  // pass through it — the two coordinates the screen is about — drawn as bright
+  // guide lines over the faint grid (mirroring the Celestial icon's RA/Dec guides).
+  const obsFrac = -0.3; // vertical position as a fraction of the radius
+  const obsX = CX + radius * 0.28;
+  const obsY = CY + radius * obsFrac;
+  const parallelRx = radius * Math.sqrt(Math.max(0, 1 - obsFrac * obsFrac));
+  const latitudeGuide = new Path(Shape.ellipse(CX, obsY, parallelRx, parallelRx * 0.22, 0), {
+    stroke: BasicCoordinatesAndSeasonsColors.latitudeIndicatorColorProperty,
+    lineWidth: 4,
+    lineCap: "round",
+  });
+  latitudeGuide.clipArea = clip;
+  const meridianFrac = (radius * 0.28) / parallelRx; // meridian half-width hitting the observer
+  const longitudeGuide = new Path(Shape.ellipse(CX, CY, radius * meridianFrac, radius, 0), {
+    stroke: BasicCoordinatesAndSeasonsColors.longitudeIndicatorColorProperty,
+    lineWidth: 4,
+    lineCap: "round",
+  });
+  longitudeGuide.clipArea = clip;
+
+  const observer = new Circle(10, {
     fill: BasicCoordinatesAndSeasonsColors.observerColorProperty,
     stroke: BasicCoordinatesAndSeasonsColors.cardinalLabelColorProperty,
-    lineWidth: 1.5,
-    centerX: CX + radius * 0.28,
-    centerY: CY - radius * 0.3,
+    lineWidth: 2,
+    centerX: obsX,
+    centerY: obsY,
   });
-  return iconFrom(new Node({ children: [background(), globe, grid, observer] }));
+  return iconFrom(
+    new Node({
+      children: [background(), globe, grid, shading, latitudeGuide, longitudeGuide, observer],
+    }),
+  );
 }
 
 export function createCelestialIcon(): ScreenIcon {

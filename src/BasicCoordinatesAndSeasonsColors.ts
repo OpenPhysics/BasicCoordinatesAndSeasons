@@ -227,6 +227,12 @@ const BasicCoordinatesAndSeasonsColors = {
     projector: "#ef6c00",
   }),
 
+  /** The prime meridian (0° longitude) reference line on the flat map / globe. */
+  primeMeridianColorProperty: new ProfileColorProperty(BasicCoordinatesAndSeasonsNamespace, "primeMeridian", {
+    default: "#4dd0a0",
+    projector: "#00897b",
+  }),
+
   /** Reference-city dot + label text on the flat map ("show cities"). */
   cityLabelColorProperty: new ProfileColorProperty(BasicCoordinatesAndSeasonsNamespace, "cityLabel", {
     default: "#ffffff",

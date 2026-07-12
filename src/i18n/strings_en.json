@@ -9,18 +9,26 @@
     "terrestrial": {
       "screenSummary": {
         "playArea": "The play area shows a flat map of Earth and a globe. A draggable observer marker sets one latitude and longitude, shown on both.",
-        "controlArea": "The control area has latitude and longitude fields, a reference-circles toggle, and a Reset All button.",
+        "controlArea": "The control area has latitude and longitude fields and toggles for the prime meridian, meridians, parallels of latitude, the International Date Line, geographical lines, feature labels, and cities, plus a Reset All button.",
         "interactionHint": "Drag the observer on the map or globe, or type a latitude or longitude, to explore Earth's coordinates."
       },
       "currentDetails": "The screen is in its initial state.",
       "currentDetailsPattern": "The observer is at {{latitude}}, {{longitude}}.",
+      "positionResponsePattern": "{{latitude}}, {{longitude}}",
       "controls": {
-        "mapFeatures": "Show the tropic and polar reference circles and the International Date Line",
+        "primeMeridian": "Show the prime meridian, the meridian at zero degrees longitude",
+        "meridians": "Show a series of meridians, lines of constant longitude",
+        "parallels": "Show a series of parallels of latitude, lines of constant latitude",
+        "dateLine": "Show the International Date Line",
+        "geographicalLines": "Show the equator, tropics, arctic and antarctic circles, and the poles",
+        "labels": "Label the visible map features with their names",
         "showCities": "Label reference cities on the map",
         "panWest": "Pan the map west",
         "panEast": "Pan the map east",
         "globeObserver": "Globe observer",
-        "globeObserverHelp": "Drag to move the observer, or hold Shift and drag to rotate the globe. Use the arrow keys to nudge the observer's latitude and longitude.",
+        "globeObserverHelp": "Drag the observer marker to move it, or use the arrow keys to nudge its latitude and longitude.",
+        "globeOrientation": "Globe orientation",
+        "globeOrientationHelp": "Drag the globe to rotate it, or use the arrow keys. Hold Alt and drag to spin it about the vertical axis.",
         "googleMaps": "Open the current location in Google Maps",
         "useMyLocation": "Set the observer to my current location"
       }
@@ -33,6 +41,7 @@
       },
       "currentDetails": "The screen is in its initial state.",
       "currentDetailsPattern": "The star is at right ascension {{ra}} hours and declination {{dec}} degrees.",
+      "positionResponsePattern": "Right ascension {{ra}} hours, declination {{dec}} degrees",
       "controls": {
         "flatSkyMapStar": "Sky map star",
         "flatSkyMapStarHelp": "Drag or use the arrow keys to move the star. Right ascension increases to the left.",
@@ -54,6 +63,8 @@
       },
       "currentDetails": "The screen is in its initial state.",
       "currentDetailsPattern": "It is {{date}}. The Sun's declination is {{declination}} degrees; at latitude {{latitude}} degrees the noon Sun altitude is {{altitude}} degrees.",
+      "dateResponsePattern": "Date {{date}}",
+      "latitudeResponsePattern": "Latitude {{latitude}}",
       "controls": {
         "earth": "Earth on its orbit",
         "earthHelp": "Drag Earth around its orbit, or use the arrow keys, to change the date."
@@ -76,7 +87,10 @@
     "antarcticCircle": "Antarctic Circle",
     "internationalDateLine": "International Date Line",
     "useMyLocation": "Use My Location",
-    "mapFeatures": "Map features",
+    "primeMeridian": "Prime Meridian",
+    "meridians": "Meridians",
+    "parallels": "Parallels of latitude",
+    "geographicalLines": "Geographical Lines",
     "showCities": "Cities",
     "decimal": "Decimal",
     "sexagesimal": "Sexagesimal",
@@ -118,7 +132,7 @@
     "juneSolstice": "June solstice",
     "septemberEquinox": "Sept. equinox",
     "decemberSolstice": "Dec. solstice",
-    "labels": "labels",
+    "labels": "Labels",
     "northCelestialPole": "north celestial pole",
     "southCelestialPole": "south celestial pole",
     "celestialEquatorLabel": "celestial equator",

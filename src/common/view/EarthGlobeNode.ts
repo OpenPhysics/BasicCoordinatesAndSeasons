@@ -51,6 +51,19 @@ const meridianPoints = (raOffsetHours: number, longitudeDeg: number): Vector3[] 
   return points;
 };
 
+// Visibility helpers: `gateOn` tracks one Property; `gateBoth` requires two (a
+// feature AND the labels toggle).
+const gateOn = (node: Node, property: TReadOnlyProperty<boolean>): void => {
+  property.link((visible) => {
+    node.visible = visible;
+  });
+};
+const gateBoth = (node: Node, a: TReadOnlyProperty<boolean>, b: TReadOnlyProperty<boolean>): void => {
+  Multilink.multilink([a, b], (x, y) => {
+    node.visible = x && y;
+  });
+};
+
 /** A named point (city) on the globe, in decimal degrees (+N, +E). */
 export type GlobeGeoPoint = { readonly name: string; readonly latitude: number; readonly longitude: number };
 
@@ -66,10 +79,22 @@ export type GlobeGeoVertex = { readonly latitude: number; readonly longitude: nu
 export type GlobeOverlays = {
   readonly cities: readonly GlobeGeoPoint[];
   readonly dateLine: readonly GlobeGeoVertex[];
-  /** Latitudes (°) of the reference small-circles, e.g. the tropics and polar circles. */
+  /** Latitudes (°) of the "geographical" reference small-circles: the tropics and polar circles. */
   readonly referenceCircleLatitudes: readonly number[];
   readonly showCitiesProperty: TReadOnlyProperty<boolean>;
-  readonly mapFeaturesVisibleProperty: TReadOnlyProperty<boolean>;
+  // ── Granular feature toggles (mirror the flat map) ──
+  /** The prime meridian (0° longitude) great circle. */
+  readonly primeMeridianVisibleProperty: TReadOnlyProperty<boolean>;
+  /** A series of meridians (constant longitude), every 30°. */
+  readonly meridiansVisibleProperty: TReadOnlyProperty<boolean>;
+  /** A series of parallels of latitude (constant latitude), every 30°. */
+  readonly parallelsVisibleProperty: TReadOnlyProperty<boolean>;
+  /** The International Date Line. */
+  readonly dateLineVisibleProperty: TReadOnlyProperty<boolean>;
+  /** The equator + tropics + polar circles + poles. */
+  readonly geographicalLinesVisibleProperty: TReadOnlyProperty<boolean>;
+  /** Whether the visible features are annotated with their names. */
+  readonly labelsVisibleProperty: TReadOnlyProperty<boolean>;
   /**
    * Formatted observer-longitude text for the colored meridian indicator label
    * (Terrestrial screen). When present, a colored meridian + parallel are drawn
@@ -100,6 +125,21 @@ export type EarthGlobeNodeOptions = {
   overlays?: GlobeOverlays;
 
   /**
+   * How the geography is anchored to the RA frame. Defaults to `true`.
+   *
+   * `true` (observer-anchored) — the geography rotates so the observer's own meridian
+   * always faces the camera: the observer marker stays centered while the earth spins
+   * beneath it (the NAAP longLatDemo behavior, and how the small globe on the
+   * Celestial / Seasons screens turns with sidereal time).
+   *
+   * `false` (fixed geography) — the prime meridian is pinned at RA = sidereal time and
+   * does not depend on the observer's longitude; instead the observer marker rides at
+   * its true latitude/longitude. Dragging the marker then slides it freely across a
+   * stationary globe, matching the celestial-sphere guide star.
+   */
+  observerAnchored?: boolean;
+
+  /**
    * Direction to the Sun as a unit vector in the equatorial (RA/Dec) frame. When
    * provided, the globe's night hemisphere (the half facing away from the Sun) is
    * shaded, showing which face is lit — the Seasons screen passes this. Omitted
@@ -122,6 +162,7 @@ export class EarthGlobeNode extends Node {
     super();
 
     const precessionAngleProperty = options?.precessionAngleProperty ?? new Property(0);
+    const observerAnchored = options?.observerAnchored ?? true;
 
     const globeScale = options?.radiusRatio ?? DEFAULT_GLOBE_SCALE;
     const globeRadius = projection.radius * globeScale;
@@ -163,17 +204,45 @@ export class EarthGlobeNode extends Node {
     const overlays = options?.overlays;
     const cityLabelColor = BasicCoordinatesAndSeasonsColors.cityLabelColorProperty;
 
+    // Geographical lines: the tropic/polar reference small-circles (dashed accent)
+    // plus the equator (solid) and north/south pole markers.
     const featureCirclesPath = new Path(null, {
       stroke: BasicCoordinatesAndSeasonsColors.accentColorProperty,
       lineWidth: 1,
       lineDash: [4, 3],
       opacity: 0.85,
     });
+    const equatorArcPath = new Path(null, {
+      stroke: BasicCoordinatesAndSeasonsColors.celestialEquatorColorProperty,
+      lineWidth: 1,
+    });
+    const northPoleDot = new Circle(2.5, { fill: BasicCoordinatesAndSeasonsColors.cardinalLabelColorProperty });
+    const southPoleDot = new Circle(2.5, { fill: BasicCoordinatesAndSeasonsColors.cardinalLabelColorProperty });
+    const geographicalLinesLayer = new Node({
+      children: [equatorArcPath, featureCirclesPath, northPoleDot, southPoleDot],
+    });
+
+    // A series of meridians (constant longitude) and the single prime meridian.
+    const meridiansArcPath = new Path(null, {
+      stroke: BasicCoordinatesAndSeasonsColors.gridColorProperty,
+      lineWidth: 0.8,
+      opacity: 0.85,
+    });
+    const primeMeridianArcPath = new Path(null, {
+      stroke: BasicCoordinatesAndSeasonsColors.primeMeridianColorProperty,
+      lineWidth: 1.5,
+    });
+    // A series of parallels of latitude (constant latitude).
+    const parallelsArcPath = new Path(null, {
+      stroke: BasicCoordinatesAndSeasonsColors.gridColorProperty,
+      lineWidth: 0.8,
+      opacity: 0.85,
+    });
+
     const dateLinePath = new Path(null, {
       stroke: BasicCoordinatesAndSeasonsColors.dateLineColorProperty,
       lineWidth: 1.5,
     });
-    const featuresLayer = new Node({ children: [featureCirclesPath, dateLinePath] });
 
     const cityNodes = (overlays?.cities ?? []).map((city) => {
       const dot = new Circle(2, { fill: cityLabelColor });
@@ -237,10 +306,7 @@ export class EarthGlobeNode extends Node {
     // Pinned to the front-facing point of each reference circle / the date line so
     // they ride on the feature as the globe turns. Toggled with the map features.
     const featureLabelFont = new PhetFont(9);
-    const makeGlobeFeatureLabel = (
-      labelProperty: TReadOnlyProperty<string>,
-      _fillProperty: ProfileColorProperty,
-    ): Text =>
+    const makeGlobeFeatureLabel = (labelProperty: TReadOnlyProperty<string>): Text =>
       new Text(labelProperty, {
         font: featureLabelFont,
         fill: BasicCoordinatesAndSeasonsColors.cardinalLabelColorProperty,
@@ -248,64 +314,63 @@ export class EarthGlobeNode extends Node {
 
     const controls = StringManager.getInstance().getControls();
     const polarCircleLat = 90 - OBLIQUITY_DEGREES;
+    // Geographical-line labels: equator, tropics, and polar circles, each riding on
+    // the front-facing point of its small circle.
+    // The poles are handled as circle labels too: placeOnCircle with a polar angle of
+    // 0° (north) or 180° (south) collapses the small circle to the pole point.
     const circleFeatureLabels: { label: Text; lat: number }[] = overlays
       ? [
-          {
-            label: makeGlobeFeatureLabel(
-              controls.equatorStringProperty,
-              BasicCoordinatesAndSeasonsColors.celestialEquatorColorProperty,
-            ),
-            lat: 0,
-          },
-          {
-            label: makeGlobeFeatureLabel(
-              controls.tropicOfCancerStringProperty,
-              BasicCoordinatesAndSeasonsColors.accentColorProperty,
-            ),
-            lat: OBLIQUITY_DEGREES,
-          },
-          {
-            label: makeGlobeFeatureLabel(
-              controls.tropicOfCapricornStringProperty,
-              BasicCoordinatesAndSeasonsColors.accentColorProperty,
-            ),
-            lat: -OBLIQUITY_DEGREES,
-          },
-          {
-            label: makeGlobeFeatureLabel(
-              controls.arcticCircleStringProperty,
-              BasicCoordinatesAndSeasonsColors.accentColorProperty,
-            ),
-            lat: polarCircleLat,
-          },
-          {
-            label: makeGlobeFeatureLabel(
-              controls.antarcticCircleStringProperty,
-              BasicCoordinatesAndSeasonsColors.accentColorProperty,
-            ),
-            lat: -polarCircleLat,
-          },
+          { label: makeGlobeFeatureLabel(controls.equatorStringProperty), lat: 0 },
+          { label: makeGlobeFeatureLabel(controls.tropicOfCancerStringProperty), lat: OBLIQUITY_DEGREES },
+          { label: makeGlobeFeatureLabel(controls.tropicOfCapricornStringProperty), lat: -OBLIQUITY_DEGREES },
+          { label: makeGlobeFeatureLabel(controls.arcticCircleStringProperty), lat: polarCircleLat },
+          { label: makeGlobeFeatureLabel(controls.antarcticCircleStringProperty), lat: -polarCircleLat },
+          { label: makeGlobeFeatureLabel(controls.northPoleStringProperty), lat: 90 },
+          { label: makeGlobeFeatureLabel(controls.southPoleStringProperty), lat: -90 },
         ]
       : [];
-    const dateLineLabel = overlays
-      ? makeGlobeFeatureLabel(
-          controls.internationalDateLineStringProperty,
-          BasicCoordinatesAndSeasonsColors.dateLineColorProperty,
-        )
-      : null;
-    const featureLabelsLayer = new Node({
-      children: [...circleFeatureLabels.map((c) => c.label), ...(dateLineLabel ? [dateLineLabel] : [])],
-    });
+    // Group the geographical labels so a single toggle (geographical lines + labels)
+    // governs them all.
+    const geoLabelsLayer = new Node({ children: circleFeatureLabels.map((c) => c.label) });
+    const dateLineLabel = overlays ? makeGlobeFeatureLabel(controls.internationalDateLineStringProperty) : null;
+    const primeMeridianGlobeLabel = overlays ? makeGlobeFeatureLabel(controls.primeMeridianStringProperty) : null;
+    // Wrap each label in its own layer: the per-frame redraw sets the label's own
+    // `.visible` for front-hemisphere culling, so the checkbox gate must live on the
+    // parent (otherwise the redraw would override the gate on first render).
+    const dateLineLabelLayer = dateLineLabel ? new Node({ children: [dateLineLabel] }) : null;
+    const primeMeridianLabelLayer = primeMeridianGlobeLabel ? new Node({ children: [primeMeridianGlobeLabel] }) : null;
 
     this.children = overlays
-      ? [disc, landPath, gridPath, featuresLayer, citiesLayer, indicatorLayer, featureLabelsLayer, observerDot]
+      ? [
+          disc,
+          landPath,
+          parallelsArcPath,
+          meridiansArcPath,
+          primeMeridianArcPath,
+          geographicalLinesLayer,
+          dateLinePath,
+          citiesLayer,
+          indicatorLayer,
+          geoLabelsLayer,
+          ...(dateLineLabelLayer ? [dateLineLabelLayer] : []),
+          ...(primeMeridianLabelLayer ? [primeMeridianLabelLayer] : []),
+          observerDot,
+        ]
       : [disc, landPath, gridPath, shadePath, observerDot];
 
     if (overlays) {
-      overlays.mapFeaturesVisibleProperty.link((visible) => {
-        featuresLayer.visible = visible;
-        featureLabelsLayer.visible = visible;
-      });
+      gateOn(parallelsArcPath, overlays.parallelsVisibleProperty);
+      gateOn(meridiansArcPath, overlays.meridiansVisibleProperty);
+      gateOn(primeMeridianArcPath, overlays.primeMeridianVisibleProperty);
+      gateOn(geographicalLinesLayer, overlays.geographicalLinesVisibleProperty);
+      gateOn(dateLinePath, overlays.dateLineVisibleProperty);
+      gateBoth(geoLabelsLayer, overlays.geographicalLinesVisibleProperty, overlays.labelsVisibleProperty);
+      if (dateLineLabelLayer) {
+        gateBoth(dateLineLabelLayer, overlays.dateLineVisibleProperty, overlays.labelsVisibleProperty);
+      }
+      if (primeMeridianLabelLayer) {
+        gateBoth(primeMeridianLabelLayer, overlays.primeMeridianVisibleProperty, overlays.labelsVisibleProperty);
+      }
       overlays.showCitiesProperty.link((visible) => {
         citiesLayer.visible = visible;
       });
@@ -396,14 +461,38 @@ export class EarthGlobeNode extends Node {
       return shape;
     };
 
+    // ── Granular graticule builders (Terrestrial overlays) ──────────────────────
+    /** Meridians at the given longitudes (great circles) at a given GST. */
+    const buildMeridiansShape = (gst: number, longitudes: readonly number[]): Shape => {
+      const shape = new Shape();
+      for (const lon of longitudes) {
+        addFrontHemisphereSmoothPolyline(projection, meridianPoints(gst, lon), shape, mapGlobePoint);
+      }
+      return shape;
+    };
+    /** Parallels at the given latitudes (constant-latitude small circles). */
+    const buildParallelsShape = (latitudes: readonly number[]): Shape => {
+      const shape = new Shape();
+      for (const lat of latitudes) {
+        addFrontHemisphereSmoothPolyline(projection, smallCirclePoints(NCP, 90 - lat), shape, mapGlobePoint, true);
+      }
+      return shape;
+    };
+    // Meridians every 30°, excluding the prime meridian (drawn separately).
+    const meridianLongitudesNoPrime = GLOBE_LONGITUDES.filter((lon) => lon !== 0);
+
     const applyGlobeClip = (): void => {
       const clip = Shape.circle(projection.center.x, projection.center.y, globeRadius);
       landPath.clipArea = clip;
       gridPath.clipArea = clip;
       shadePath.clipArea = clip;
-      // Reference circles / date line hug the surface too; city labels stay
-      // unclipped so names near the limb remain readable.
+      // Reference circles / date line / graticule hug the surface too; city labels
+      // stay unclipped so names near the limb remain readable.
       featureCirclesPath.clipArea = clip;
+      equatorArcPath.clipArea = clip;
+      meridiansArcPath.clipArea = clip;
+      primeMeridianArcPath.clipArea = clip;
+      parallelsArcPath.clipArea = clip;
       dateLinePath.clipArea = clip;
       // Coordinate-indicator arcs hug the surface as well.
       longitudeArcPath.clipArea = clip;
@@ -416,6 +505,115 @@ export class EarthGlobeNode extends Node {
     };
 
     const shadeSunProperty: TReadOnlyProperty<Vector3> = sunDirectionProperty ?? new Property(new Vector3(0, 0, 1));
+
+    // `observerAnchored` is a fixed mode, so resolve its two branches once here rather
+    // than per redraw: the Greenwich sidereal time the geography is drawn at, and the RA
+    // the observer marker sits at (see the `gst` comment inside the multilink).
+    const gstFor = observerAnchored
+      ? (lst: number, lonHours: number, prec: number): number => lst - lonHours + prec
+      : (lst: number, _lonHours: number, prec: number): number => lst + prec;
+    const observerRaFor = observerAnchored
+      ? (lst: number, _lonHours: number): number => lst
+      : (lst: number, lonHours: number): number => lst + lonHours;
+
+    // Draws the Terrestrial overlays (reference circles, graticule, date line, cities,
+    // indicator arcs, and feature labels) into their Paths, all anchored to the same
+    // GST frame as the geography and front-hemisphere culled so they turn with the globe.
+    const drawOverlays = (
+      activeOverlays: GlobeOverlays,
+      gst: number,
+      latitude: number,
+      longitude: number,
+      observer: { point: Vector2; front: boolean },
+    ): void => {
+      const geoToVector = (lat: number, lon: number): Vector3 => raDecToVector3(gst + (lon / 360) * HOURS_PER_DAY, lat);
+
+      // Geographical lines: tropic/polar reference circles + equator + poles.
+      const circles = new Shape();
+      for (const lat of activeOverlays.referenceCircleLatitudes) {
+        addFrontHemisphereSmoothPolyline(projection, smallCirclePoints(NCP, 90 - lat), circles, mapGlobePoint, true);
+      }
+      featureCirclesPath.shape = circles;
+      // The equator is just the parallel at latitude 0.
+      equatorArcPath.shape = buildParallelsShape([0]);
+
+      const northPole = toGlobe(NCP);
+      northPoleDot.center = northPole.point;
+      northPoleDot.visible = northPole.front;
+      const southPole = toGlobe(new Vector3(0, 0, -1));
+      southPoleDot.center = southPole.point;
+      southPoleDot.visible = southPole.front;
+
+      // Meridians (series + prime) and parallels of latitude.
+      meridiansArcPath.shape = buildMeridiansShape(gst, meridianLongitudesNoPrime);
+      primeMeridianArcPath.shape = buildMeridiansShape(gst, [0]);
+      parallelsArcPath.shape = buildParallelsShape(GLOBE_LATITUDES);
+
+      const idl = new Shape();
+      const idlPoints = activeOverlays.dateLine.map((v) => geoToVector(v.latitude, v.longitude));
+      addFrontHemispherePolyline(projection, idlPoints, idl, mapGlobePoint);
+      dateLinePath.shape = idl;
+
+      for (const cityNode of cityNodes) {
+        const projected = toGlobe(geoToVector(cityNode.city.latitude, cityNode.city.longitude));
+        cityNode.dot.center = projected.point;
+        cityNode.label.left = projected.point.x + 4;
+        cityNode.label.centerY = projected.point.y;
+        cityNode.container.visible = projected.front;
+      }
+
+      // Coordinate indicator: two arcs whose lengths encode the values.
+      //   longitude arc — along the equator from Greenwich (0°) to the observer's
+      //     longitude (east for +, west for −)
+      //   latitude arc  — along the observer's meridian from the equator (0°) to the
+      //     observer's latitude (north for +, south for −)
+      // Both are front-culled; they meet at the equator point of the observer's meridian.
+      const lonShape = new Shape();
+      addFrontHemisphereSmoothPolyline(
+        projection,
+        arcSamples(longitude, (lon) => geoToVector(0, lon)),
+        lonShape,
+        mapGlobePoint,
+      );
+      longitudeArcPath.shape = lonShape;
+
+      const latShape = new Shape();
+      addFrontHemisphereSmoothPolyline(
+        projection,
+        arcSamples(latitude, (lat) => geoToVector(lat, longitude)),
+        latShape,
+        mapGlobePoint,
+      );
+      latitudeArcPath.shape = latShape;
+
+      // Longitude label sits at the corner (equator ∩ observer's meridian); latitude
+      // label sits at the observer. Each shows only when front-facing.
+      const corner = toGlobe(geoToVector(0, longitude));
+      lonIndicatorLabel.visible = corner.front;
+      if (corner.front) {
+        lonIndicatorLabel.left = corner.point.x + 5;
+        lonIndicatorLabel.centerY = corner.point.y;
+      }
+      latIndicatorLabel.visible = observer.front;
+      if (observer.front) {
+        latIndicatorLabel.left = observer.point.x + 7;
+        latIndicatorLabel.top = observer.point.y + 2;
+      }
+
+      // Feature labels ride on the front-facing point of each reference circle
+      // (equator + tropics + polar + poles), the prime meridian, and the date line.
+      for (const { label, lat } of circleFeatureLabels) {
+        placeOnCircle(label, NCP, 90 - lat);
+      }
+      if (primeMeridianGlobeLabel) {
+        // Sample only mid-latitudes (drop the ±~60°+ polar ends) so the label rides on
+        // the middle of the meridian rather than colliding with the north-pole label.
+        placeOnVertices(primeMeridianGlobeLabel, meridianPoints(gst, 0).slice(6, -6));
+      }
+      if (dateLineLabel) {
+        placeOnVertices(dateLineLabel, idlPoints);
+      }
+    };
 
     Multilink.multilink(
       [
@@ -441,7 +639,11 @@ export class EarthGlobeNode extends Node {
         // the observer's own city beneath the dot (which stays at RA = LST) rather than always
         // drawing the 0° meridian under it. The precession angle shifts the geography in RA,
         // modelling the slow westward drift of the equinox point.
-        const gst = lst - (longitude / 360) * HOURS_PER_DAY + precessionHours;
+        //
+        // With fixed geography (observerAnchored === false) the longitude term is dropped, so
+        // the earth stands still and the observer marker instead rides at its true longitude.
+        const longitudeHours = (longitude / 360) * HOURS_PER_DAY;
+        const gst = gstFor(lst, longitudeHours, precessionHours);
 
         const landShape = new Shape();
         for (const polygon of getEarthShorePolygons(resolution)) {
@@ -449,93 +651,24 @@ export class EarthGlobeNode extends Node {
         }
         landPath.shape = landShape;
 
-        const shape = buildGridShape(gst);
-        gridPath.shape = shape;
+        // The always-on combined graticule is only used when there are no overlays;
+        // the Terrestrial screen draws its meridians/parallels via the toggled paths.
+        if (!overlays) {
+          gridPath.shape = buildGridShape(gst);
+        }
 
-        // Observer stands where their zenith points: RA = LST, Dec = latitude.
-        const observer = toGlobe(raDecToVector3(lst, latitude));
+        // Observer stands where their zenith points: Dec = latitude. When the geography is
+        // observer-anchored the meridian is always centered (RA = LST); with fixed geography
+        // the marker rides at its true longitude (RA = LST + longitude), so it moves across
+        // the stationary globe as the observer's location changes.
+        const observer = toGlobe(raDecToVector3(observerRaFor(lst, longitudeHours), latitude));
         observerDot.center = observer.point;
         observerDot.visible = observer.front;
 
-        // Terrestrial overlays: reference circles + date line + cities, anchored to
-        // the same GST frame as the geography and front-hemisphere culled so they
-        // turn with the globe.
+        // Terrestrial overlays: reference circles + graticule + date line + cities +
+        // indicator arcs + labels (all drawn together in drawOverlays).
         if (overlays) {
-          const geoToVector = (lat: number, lon: number): Vector3 =>
-            raDecToVector3(gst + (lon / 360) * HOURS_PER_DAY, lat);
-
-          const circles = new Shape();
-          for (const lat of overlays.referenceCircleLatitudes) {
-            addFrontHemisphereSmoothPolyline(
-              projection,
-              smallCirclePoints(NCP, 90 - lat),
-              circles,
-              mapGlobePoint,
-              true,
-            );
-          }
-          featureCirclesPath.shape = circles;
-
-          const idl = new Shape();
-          const idlPoints = overlays.dateLine.map((v) => geoToVector(v.latitude, v.longitude));
-          addFrontHemispherePolyline(projection, idlPoints, idl, mapGlobePoint);
-          dateLinePath.shape = idl;
-
-          for (const cityNode of cityNodes) {
-            const projected = toGlobe(geoToVector(cityNode.city.latitude, cityNode.city.longitude));
-            cityNode.dot.center = projected.point;
-            cityNode.label.left = projected.point.x + 4;
-            cityNode.label.centerY = projected.point.y;
-            cityNode.container.visible = projected.front;
-          }
-
-          // Coordinate indicator: two arcs whose lengths encode the values.
-          //   longitude arc — along the equator from Greenwich (0°) to the
-          //     observer's longitude (the arc runs east for +, west for −)
-          //   latitude arc  — along the observer's meridian from the equator (0°)
-          //     to the observer's latitude (north for +, south for −)
-          // Both are front-culled so they turn with the globe. They meet at the
-          // equator point of the observer's meridian.
-          const lonShape = new Shape();
-          addFrontHemisphereSmoothPolyline(
-            projection,
-            arcSamples(longitude, (lon) => geoToVector(0, lon)),
-            lonShape,
-            mapGlobePoint,
-          );
-          longitudeArcPath.shape = lonShape;
-
-          const latShape = new Shape();
-          addFrontHemisphereSmoothPolyline(
-            projection,
-            arcSamples(latitude, (lat) => geoToVector(lat, longitude)),
-            latShape,
-            mapGlobePoint,
-          );
-          latitudeArcPath.shape = latShape;
-
-          // Longitude label sits at the corner (equator ∩ observer's meridian);
-          // latitude label sits at the observer. Each shows only when front-facing.
-          const corner = toGlobe(geoToVector(0, longitude));
-          lonIndicatorLabel.visible = corner.front;
-          if (corner.front) {
-            lonIndicatorLabel.left = corner.point.x + 5;
-            lonIndicatorLabel.centerY = corner.point.y;
-          }
-          latIndicatorLabel.visible = observer.front;
-          if (observer.front) {
-            latIndicatorLabel.left = observer.point.x + 7;
-            latIndicatorLabel.top = observer.point.y + 2;
-          }
-
-          // Feature labels ride on the front-facing point of each reference circle
-          // (equator + tropics + polar) and the date line.
-          for (const { label, lat } of circleFeatureLabels) {
-            placeOnCircle(label, NCP, 90 - lat);
-          }
-          if (dateLineLabel) {
-            placeOnVertices(dateLineLabel, idlPoints);
-          }
+          drawOverlays(overlays, gst, latitude, longitude, observer);
         }
       },
     );

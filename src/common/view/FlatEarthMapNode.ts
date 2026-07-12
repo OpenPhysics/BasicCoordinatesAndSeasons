@@ -36,6 +36,7 @@ import BasicCoordinatesAndSeasonsHotkeyData from "../BasicCoordinatesAndSeasonsH
 import { type EarthShorePoint, getEarthShorePolygons } from "../model/EarthShoreData.js";
 import { CheckeredBorderNode } from "./CheckeredBorderNode.js";
 import { CoordinateIndicatorNode } from "./CoordinateIndicatorNode.js";
+import { speakValueOnFocus } from "./speakValueOnFocus.js";
 
 /** Canonical (pan-free) map coordinate helpers passed to overlay factories. */
 export type FlatMapWorldContext = {
@@ -57,6 +58,18 @@ export type FlatEarthMapNodeOptions = {
    */
   overlayFactory?: (context: FlatMapWorldContext) => Node;
   /**
+   * Whether to draw the always-on faint graticule (parallels every 30°, meridians
+   * every 60°). Defaults to true. The Terrestrial screen turns this off and lets its
+   * own toggleable "Meridians" / "Parallels of latitude" overlays own the graticule.
+   */
+  includeBaseGraticule?: boolean;
+  /**
+   * Whether to draw the always-on equator line. Defaults to true. The Terrestrial
+   * screen turns this off and draws the equator as part of its toggleable
+   * "Geographical Lines" overlay instead.
+   */
+  includeBaseEquator?: boolean;
+  /**
    * Optional colored coordinate indicator: a full-width latitude line and a
    * full-height longitude line drawn through the observer cursor, each carrying a
    * numerical value label at the map edge. Matches the NAAP mapExplorer
@@ -67,6 +80,8 @@ export type FlatEarthMapNodeOptions = {
     longitudeLabelProperty: TReadOnlyProperty<string>;
     latitudeLabelProperty: TReadOnlyProperty<string>;
   };
+  /** Live latitude/longitude response spoken when a keyboard user nudges the cursor. */
+  accessibleObjectResponseProperty?: TReadOnlyProperty<string>;
 };
 
 type GeoPoint = { lon: number; lat: number };
@@ -229,6 +244,8 @@ export class FlatEarthMapNode extends Node {
     options: FlatEarthMapNodeOptions,
   ) {
     const { width, height, overlayFactory, coordinateIndicator } = options;
+    const includeBaseGraticule = options.includeBaseGraticule ?? true;
+    const includeBaseEquator = options.includeBaseEquator ?? true;
     const controls = StringManager.getInstance().getControls();
 
     const lonToX = (lon: number): number => ((lon + 180) / 360) * width;
@@ -258,26 +275,35 @@ export class FlatEarthMapNode extends Node {
       });
       landPaths.push(landPath);
 
+      const children: Node[] = [landPath];
+
       // Graticule: parallels every 30°, meridians every 60°.
-      const grid = new Shape();
-      for (let lat = -60; lat <= 60; lat += 30) {
-        grid.moveTo(0, latToY(lat)).lineTo(width, latToY(lat));
+      if (includeBaseGraticule) {
+        const grid = new Shape();
+        for (let lat = -60; lat <= 60; lat += 30) {
+          grid.moveTo(0, latToY(lat)).lineTo(width, latToY(lat));
+        }
+        for (let lon = -120; lon <= 120; lon += 60) {
+          grid.moveTo(lonToX(lon), 0).lineTo(lonToX(lon), height);
+        }
+        children.push(
+          new Path(grid, {
+            stroke: BasicCoordinatesAndSeasonsColors.gridColorProperty,
+            lineWidth: 0.5,
+            opacity: 0.7,
+          }),
+        );
       }
-      for (let lon = -120; lon <= 120; lon += 60) {
-        grid.moveTo(lonToX(lon), 0).lineTo(lonToX(lon), height);
+
+      if (includeBaseEquator) {
+        children.push(
+          new Line(0, latToY(0), width, latToY(0), {
+            stroke: BasicCoordinatesAndSeasonsColors.celestialEquatorColorProperty,
+            lineWidth: 1,
+          }),
+        );
       }
-      const gridPath = new Path(grid, {
-        stroke: BasicCoordinatesAndSeasonsColors.gridColorProperty,
-        lineWidth: 0.5,
-        opacity: 0.7,
-      });
 
-      const equatorLine = new Line(0, latToY(0), width, latToY(0), {
-        stroke: BasicCoordinatesAndSeasonsColors.celestialEquatorColorProperty,
-        lineWidth: 1,
-      });
-
-      const children: Node[] = [landPath, gridPath, equatorLine];
       if (overlayFactory) {
         children.push(overlayFactory(worldContext));
       }
@@ -484,5 +510,11 @@ export class FlatEarthMapNode extends Node {
         },
       }),
     );
+
+    // Speak the observer's latitude/longitude to screen readers as a keyboard user
+    // nudges the cursor.
+    if (options.accessibleObjectResponseProperty) {
+      speakValueOnFocus(this, options.accessibleObjectResponseProperty);
+    }
   }
 }

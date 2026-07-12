@@ -9,18 +9,26 @@
     "terrestrial": {
       "screenSummary": {
         "playArea": "El área de juego muestra un mapa plano de la Tierra y un globo. Un marcador de observador arrastrable establece una latitud y longitud, mostradas en ambos.",
-        "controlArea": "El área de control tiene campos de latitud y longitud, un interruptor de círculos de referencia y un botón Restablecer todo.",
+        "controlArea": "El área de control tiene campos de latitud y longitud e interruptores para el meridiano de Greenwich, los meridianos, los paralelos de latitud, la Línea Internacional de Cambio de Fecha, las líneas geográficas, las etiquetas de los elementos y las ciudades, además de un botón Restablecer todo.",
         "interactionHint": "Arrastra el observador en el mapa o el globo, o escribe una latitud o longitud, para explorar las coordenadas de la Tierra."
       },
       "currentDetails": "La pantalla está en su estado inicial.",
       "currentDetailsPattern": "El observador está en {{latitude}}, {{longitude}}.",
+      "positionResponsePattern": "{{latitude}}, {{longitude}}",
       "controls": {
-        "mapFeatures": "Mostrar los círculos de referencia de los trópicos y polares y la Línea Internacional de Cambio de Fecha",
+        "primeMeridian": "Mostrar el meridiano de Greenwich, el meridiano en la longitud cero grados",
+        "meridians": "Mostrar una serie de meridianos, líneas de longitud constante",
+        "parallels": "Mostrar una serie de paralelos de latitud, líneas de latitud constante",
+        "dateLine": "Mostrar la Línea Internacional de Cambio de Fecha",
+        "geographicalLines": "Mostrar el ecuador, los trópicos, los círculos ártico y antártico y los polos",
+        "labels": "Etiquetar los elementos visibles del mapa con sus nombres",
         "showCities": "Etiquetar ciudades de referencia en el mapa",
         "panWest": "Desplazar el mapa hacia el oeste",
         "panEast": "Desplazar el mapa hacia el este",
         "globeObserver": "Observador en el globo",
-        "globeObserverHelp": "Arrastra para mover el observador, o mantén Shift y arrastra para rotar el globo. Usa las teclas de flecha para ajustar la latitud y longitud del observador.",
+        "globeObserverHelp": "Arrastra el marcador del observador para moverlo, o usa las teclas de flecha para ajustar su latitud y longitud.",
+        "globeOrientation": "Orientación del globo",
+        "globeOrientationHelp": "Arrastra el globo para rotarlo, o usa las teclas de flecha. Mantén Alt y arrastra para girarlo alrededor del eje vertical.",
         "googleMaps": "Abrir la ubicación actual en Google Maps",
         "useMyLocation": "Establecer el observador en mi ubicación actual"
       }
@@ -33,6 +41,7 @@
       },
       "currentDetails": "La pantalla está en su estado inicial.",
       "currentDetailsPattern": "La estrella está en ascensión recta {{ra}} horas y declinación {{dec}} grados.",
+      "positionResponsePattern": "Ascensión recta {{ra}} horas, declinación {{dec}} grados",
       "controls": {
         "flatSkyMapStar": "Estrella del mapa del cielo",
         "flatSkyMapStarHelp": "Arrastra o usa las teclas de flecha para mover la estrella. La ascensión recta aumenta hacia la izquierda.",
@@ -54,6 +63,8 @@
       },
       "currentDetails": "La pantalla está en su estado inicial.",
       "currentDetailsPattern": "Es {{date}}. La declinación del Sol es {{declination}} grados; a la latitud {{latitude}} grados la altitud del Sol al mediodía es {{altitude}} grados.",
+      "dateResponsePattern": "Fecha {{date}}",
+      "latitudeResponsePattern": "Latitud {{latitude}}",
       "controls": {
         "earth": "La Tierra en su órbita",
         "earthHelp": "Arrastra la Tierra por su órbita, o usa las teclas de flecha, para cambiar la fecha."
@@ -76,7 +87,10 @@
     "antarcticCircle": "Círculo polar antártico",
     "internationalDateLine": "Línea internacional de cambio de fecha",
     "useMyLocation": "Usar mi ubicación",
-    "mapFeatures": "Elementos del mapa",
+    "primeMeridian": "Meridiano de Greenwich",
+    "meridians": "Meridianos",
+    "parallels": "Paralelos de latitud",
+    "geographicalLines": "Líneas geográficas",
     "showCities": "Ciudades",
     "decimal": "Decimal",
     "sexagesimal": "Sexagesimal",
@@ -118,7 +132,7 @@
     "juneSolstice": "Solsticio de junio",
     "septemberEquinox": "Equinoccio de sept.",
     "decemberSolstice": "Solsticio de dic.",
-    "labels": "etiquetas",
+    "labels": "Etiquetas",
     "northCelestialPole": "polo norte celeste",
     "southCelestialPole": "polo sur celeste",
     "celestialEquatorLabel": "ecuador celeste",

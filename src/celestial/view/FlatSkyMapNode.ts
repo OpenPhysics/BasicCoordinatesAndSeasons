@@ -37,9 +37,10 @@ import BasicCoordinatesAndSeasonsColors from "../../BasicCoordinatesAndSeasonsCo
 import type { CoordinateFormat } from "../../BasicCoordinatesAndSeasonsConstants.js";
 import { CONTROL_FONT_SIZE, STAR_RADIUS } from "../../BasicCoordinatesAndSeasonsConstants.js";
 import BasicCoordinatesAndSeasonsHotkeyData from "../../common/BasicCoordinatesAndSeasonsHotkeyData.js";
-import { normalizeHours } from "../../common/SkyCoordinates.js";
+import { HOURS_PER_DAY, normalizeHours } from "../../common/SkyCoordinates.js";
 import { CheckeredBorderNode } from "../../common/view/CheckeredBorderNode.js";
 import { CoordinateIndicatorNode } from "../../common/view/CoordinateIndicatorNode.js";
+import { speakValueOnFocus } from "../../common/view/speakValueOnFocus.js";
 import { createStarShape } from "../../common/view/starGraphics.js";
 import {
   BRIGHT_STAR_COUNT,
@@ -55,6 +56,8 @@ export type FlatSkyMapNodeOptions = {
   height: number;
   accessibleName: TReadOnlyProperty<string>;
   accessibleHelpText?: TReadOnlyProperty<string>;
+  /** Live RA/Dec response spoken when a keyboard user nudges the star. */
+  accessibleObjectResponseProperty?: TReadOnlyProperty<string>;
 };
 
 const RA_GRID_STEP_HOURS = 3;
@@ -311,17 +314,21 @@ export class FlatSkyMapNode extends Node {
     //    meridian) with numeric value pills; shared with the flat Earth map. ──
     const raLabelProperty = new DerivedProperty([raProperty, coordinateFormatProperty], (ra, fmt) => {
       if (fmt === "sexagesimal") {
-        const raH = Math.floor(ra);
-        const raM = Math.round((ra - raH) * 60);
+        // Round to whole minutes first, then carry, so 8.999ʰ reads "9ʰ 0ᵐ" (not "8ʰ 60ᵐ");
+        // wrap the hour mod 24 so a value rounding up from 23.99ʰ shows "0ʰ".
+        const totalMinutes = Math.round(ra * 60);
+        const raH = Math.floor(totalMinutes / 60) % HOURS_PER_DAY;
+        const raM = totalMinutes % 60;
         return `α = ${raH}ʰ ${raM}ᵐ`;
       }
       return `α = ${ra.toFixed(1)} h`;
     });
     const decLabelProperty = new DerivedProperty([decProperty, coordinateFormatProperty], (dec, fmt) => {
       if (fmt === "sexagesimal") {
-        const decAbs = Math.abs(dec);
-        const decD = Math.floor(decAbs);
-        const decM = Math.round((decAbs - decD) * 60);
+        // Round to whole arc-minutes first, then carry, so 29.999° reads "30° 0′" (not "29° 60′").
+        const totalMinutes = Math.round(Math.abs(dec) * 60);
+        const decD = Math.floor(totalMinutes / 60);
+        const decM = totalMinutes % 60;
         return `δ = ${dec >= 0 ? "+" : "-"}${decD}° ${decM}'`;
       }
       return `δ = ${dec >= 0 ? "+" : ""}${dec.toFixed(1)}°`;
@@ -346,6 +353,10 @@ export class FlatSkyMapNode extends Node {
     // The indicator is tiled across the ±width seam, so clip it to the map face.
     const indicatorLayer = new Node({ children: [indicator], clipArea: Shape.rect(0, 0, mapWidth, mapHeight) });
 
+    // Transparent full-map input catcher for drag-to-pan. Sits above the geography
+    // but below the star marker, so pressing anywhere except the star scrolls the sky.
+    const panTarget = new Rectangle(0, 0, mapWidth, mapHeight, { fill: "rgba(0,0,0,0)", cursor: "grab" });
+
     this.starDot = new Path(createStarShape(STAR_RADIUS), {
       fill: BasicCoordinatesAndSeasonsColors.selectedStarColorProperty,
       stroke: BasicCoordinatesAndSeasonsColors.cardinalLabelColorProperty,
@@ -363,6 +374,7 @@ export class FlatSkyMapNode extends Node {
     this.addChild(topLabelStrip);
     this.addChild(decTickLabels);
     this.addChild(indicatorLayer);
+    this.addChild(panTarget);
     this.addChild(this.starDot);
 
     // Screen column (in [0, width)) the tiled content is currently shifted by.
@@ -378,6 +390,23 @@ export class FlatSkyMapNode extends Node {
           const worldX = mod(Math.max(0, Math.min(mapWidth, local.x)) + pixelShift, mapWidth);
           raProperty.value = normalizeHours(xToRa(worldX));
           decProperty.value = Math.max(-90, Math.min(90, yToDec(Math.max(0, Math.min(mapHeight, local.y)))));
+        },
+      }),
+    );
+
+    // Background drag → pan. 24ʰ spans the full map width; dragging the sky right
+    // scrolls it right (RA offset decreases), mirroring the flat Earth map.
+    let panStartOffset = 0;
+    let panStartLocalX = 0;
+    panTarget.addInputListener(
+      new DragListener({
+        start: (event) => {
+          panStartOffset = raOffsetProperty.value;
+          panStartLocalX = this.globalToLocalPoint(event.pointer.point).x;
+        },
+        drag: (event) => {
+          const localX = this.globalToLocalPoint(event.pointer.point).x;
+          raOffsetProperty.value = panStartOffset - (localX - panStartLocalX) / pxPerHour;
         },
       }),
     );
@@ -406,6 +435,11 @@ export class FlatSkyMapNode extends Node {
         },
       }),
     );
+
+    // Speak the star's RA/Dec to screen readers as a keyboard user nudges it.
+    if (options.accessibleObjectResponseProperty) {
+      speakValueOnFocus(this.starDot, options.accessibleObjectResponseProperty);
+    }
 
     // ── Reactive updates ──────────────────────────────────────────────
     Multilink.multilink([raProperty, decProperty, raOffsetProperty, coordinateFormatProperty], (ra, dec, raOffset) => {

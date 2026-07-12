@@ -29,7 +29,6 @@ import {
 import { FLAT_RESET_ALL_BUTTON_OPTIONS } from "../../common/BasicCoordinatesAndSeasonsButtonOptions.js";
 import { SIM_CHECKBOX_OPTIONS } from "../../common/BasicCoordinatesAndSeasonsControlOptions.js";
 import { BasicCoordinatesAndSeasonsPanel } from "../../common/BasicCoordinatesAndSeasonsPanel.js";
-import { normalizeHours } from "../../common/SkyCoordinates.js";
 import { SkyProjection } from "../../common/SkyProjection.js";
 import { attachSkyCameraInteraction } from "../../common/view/attachSkyCameraInteraction.js";
 import { CelestialSphereNode } from "../../common/view/CelestialSphereNode.js";
@@ -93,26 +92,29 @@ export class CelestialScreenView extends ScreenView {
     this.addChild(flatMap);
 
     // ── Shift-map buttons above the flat sky map ────────────────────────────
-    const shiftStarBy = (deltaHours: number): void => {
+    // Like the terrestrial map's pan buttons, these scroll the whole sky map
+    // (animating the RA offset); FlatSkyMapNode tiles/wraps the content and keeps
+    // the star marker anchored to its coordinate as the map pans beneath it.
+    const shiftMapBy = (deltaHours: number): void => {
       this.shiftMapAnimation?.stop();
-      const from = model.starRaProperty.value;
+      const from = model.raOffsetProperty.value;
       this.shiftMapAnimation = new Animation({
         duration: MAP_PAN_ANIMATION_DURATION,
         easing: Easing.CUBIC_OUT,
         setValue: (value: number) => {
-          model.starRaProperty.value = normalizeHours(value);
+          model.raOffsetProperty.value = value;
         },
         from,
         to: from + deltaHours,
       });
       this.shiftMapAnimation.start();
     };
-    const shiftWestButton = new ArrowButton("left", () => shiftStarBy(RA_SHIFT_STEP_HOURS), {
+    const shiftWestButton = new ArrowButton("left", () => shiftMapBy(RA_SHIFT_STEP_HOURS), {
       arrowWidth: 12,
       arrowHeight: 12,
       accessibleName: a11y.controls.shiftMapLeftStringProperty,
     });
-    const shiftEastButton = new ArrowButton("right", () => shiftStarBy(-RA_SHIFT_STEP_HOURS), {
+    const shiftEastButton = new ArrowButton("right", () => shiftMapBy(-RA_SHIFT_STEP_HOURS), {
       arrowWidth: 12,
       arrowHeight: 12,
       accessibleName: a11y.controls.shiftMapRightStringProperty,

@@ -18,16 +18,13 @@ import { DerivedProperty, Multilink, type PhetioProperty, type TReadOnlyProperty
 import { toFixed, Vector2 } from "scenerystack/dot";
 import { Shape } from "scenerystack/kite";
 import { HBox, Node, Rectangle, Text, type TPaint, VBox } from "scenerystack/scenery";
-import { NumberControl, PhetFont, ResetAllButton } from "scenerystack/scenery-phet";
+import { NumberControl, PhetFont, ResetAllButton, TimeControlNode } from "scenerystack/scenery-phet";
 import type { ScreenViewOptions } from "scenerystack/sim";
 import { ScreenView } from "scenerystack/sim";
-import { Checkbox, TextPushButton, VerticalAquaRadioButtonGroup } from "scenerystack/sun";
+import { Checkbox, VerticalAquaRadioButtonGroup } from "scenerystack/sun";
 import BasicCoordinatesAndSeasonsColors from "../../BasicCoordinatesAndSeasonsColors.js";
 import { CONTROL_FONT_SIZE, SCREEN_VIEW_MARGIN } from "../../BasicCoordinatesAndSeasonsConstants.js";
-import {
-  FLAT_BUTTON_APPEARANCE_OPTIONS,
-  FLAT_RESET_ALL_BUTTON_OPTIONS,
-} from "../../common/BasicCoordinatesAndSeasonsButtonOptions.js";
+import { FLAT_RESET_ALL_BUTTON_OPTIONS } from "../../common/BasicCoordinatesAndSeasonsButtonOptions.js";
 import {
   SIM_CHECKBOX_OPTIONS,
   SIM_NUMBER_CONTROL_OPTIONS,
@@ -305,27 +302,26 @@ export class SeasonsScreenView extends ScreenView {
     viewControlPanel.left = STAGE_MARGIN;
     viewControlPanel.bottom = this.layoutBounds.maxY - SCREEN_VIEW_MARGIN + 6;
 
-    // ── Bottom band: month scrubber + date + start/stop animation ────────────
+    // ── Bottom band: month scrubber + date + play/pause with speed ───────────
     const monthSelector = new MonthSelectorNode(model);
     const dateText = new Text(dateProperty, { font: new PhetFont(CONTROL_FONT_SIZE + 1), fill: textColor });
-    const animLabelProperty = new DerivedProperty(
-      [model.timer.isPlayingProperty, controls.startAnimationStringProperty, controls.stopAnimationStringProperty],
-      (playing, start, stop) => (playing ? stop : start),
-    );
-    const animButton = new TextPushButton(animLabelProperty, {
-      ...FLAT_BUTTON_APPEARANCE_OPTIONS,
-      font,
-      textFill: BasicCoordinatesAndSeasonsColors.controlSurfaceTextColorProperty,
-      baseColor: BasicCoordinatesAndSeasonsColors.controlSurfaceColorProperty,
-      listener: () => {
-        model.timer.isPlayingProperty.value = !model.timer.isPlayingProperty.value;
+    const timeControl = new TimeControlNode(model.timer.isPlayingProperty, {
+      timeSpeedProperty: model.timer.timeSpeedProperty,
+      flowBoxSpacing: 14,
+      playPauseStepButtonOptions: {
+        stepForwardButtonOptions: {
+          listener: () => model.step(1 / 60),
+        },
+      },
+      speedRadioButtonGroupOptions: {
+        labelOptions: { font, fill: textColor },
       },
     });
     const monthPanel = new BasicCoordinatesAndSeasonsPanel(
       new VBox({
         align: "center",
         spacing: 8,
-        children: [monthSelector, new HBox({ spacing: 16, align: "center", children: [dateText, animButton] })],
+        children: [monthSelector, new HBox({ spacing: 18, align: "center", children: [dateText, timeControl] })],
       }),
     );
 
@@ -383,7 +379,7 @@ export class SeasonsScreenView extends ScreenView {
           earthCloseUp,
           earthFromSun,
           sunbeamRadio.group,
-          animButton,
+          timeControl,
           latitudeControl,
           resetAllButton,
         ],

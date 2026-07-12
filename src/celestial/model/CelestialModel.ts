@@ -55,8 +55,12 @@ export class CelestialModel implements TModel {
   /** Coordinate readout format: "decimal" or "sexagesimal". */
   public readonly coordinateFormatProperty = new Property<CoordinateFormat>("decimal");
 
-  /** Horizontal RA offset (hours) for the flat sky map — controls panning. */
-  public readonly raOffsetProperty = new NumberProperty(DEFAULT_RA_OFFSET_HOURS, { range: new Range(0, 24) });
+  /**
+   * Horizontal RA offset (hours) for the flat sky map — controls panning. Left
+   * unbounded (like the terrestrial map's center-longitude) so the pan buttons
+   * scroll continuously; FlatSkyMapNode wraps it modulo 24ʰ for seamless tiling.
+   */
+  public readonly raOffsetProperty = new NumberProperty(DEFAULT_RA_OFFSET_HOURS);
 
   public reset(): void {
     this.starRaProperty.reset();

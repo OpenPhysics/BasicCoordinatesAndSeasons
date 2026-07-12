@@ -14,7 +14,7 @@
  * suppressed here; this node draws its own NAAP-style annotations instead.
  */
 
-import { Multilink, Property } from "scenerystack/axon";
+import { DerivedProperty, Multilink, Property } from "scenerystack/axon";
 import { Vector2, Vector3 } from "scenerystack/dot";
 import { Node, Text } from "scenerystack/scenery";
 import { ArrowNode, PhetFont } from "scenerystack/scenery-phet";
@@ -62,6 +62,16 @@ export class SeasonsSphereNode extends Node {
       new Property(0),
       new Property(0),
       new Property(DEFAULT_EARTH_MAP_RESOLUTION),
+      // A small reference Earth (~⅓ the previous size), matching the NAAP view where
+      // the geocentric Earth is a tiny globe inside a large celestial sphere. The Sun
+      // direction shades the globe's night hemisphere (which face is lit).
+      {
+        radiusRatio: 0.1,
+        sunDirectionProperty: new DerivedProperty(
+          [model.sunRightAscensionProperty, model.sunDeclinationProperty],
+          (ra, dec) => raDecToVector3(ra, dec),
+        ),
+      },
     );
 
     const sunMarker = new SunMarkerNode(projection, model.sunRightAscensionProperty, model.sunDeclinationProperty);

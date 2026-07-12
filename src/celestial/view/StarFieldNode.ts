@@ -32,7 +32,7 @@ export type StarFieldNodeOptions = {
 
 /** Star dot radius (px) from visual magnitude — brighter stars are larger. */
 export function magToRadius(mag: number): number {
-  return Math.max(0.4, 2.4 - 0.32 * mag);
+  return Math.max(0.3, 1.7 - 0.26 * mag);
 }
 
 type StarEntry = { vector: Vector3; radius: number };
@@ -63,8 +63,8 @@ export class StarFieldNode extends Node {
     const stars = buildStarEntries();
 
     const starColor = BasicCoordinatesAndSeasonsColors.starColorProperty;
-    const frontPath = new Path(null, { fill: starColor });
-    const backPath = new Path(null, { fill: starColor, opacity: 0.18 });
+    const frontPath = new Path(null, { fill: starColor, opacity: 0.65 });
+    const backPath = new Path(null, { fill: starColor, opacity: 0.12 });
 
     this.backLayer = new Node({ children: [backPath] });
     this.frontLayer = new Node({ children: [frontPath] });

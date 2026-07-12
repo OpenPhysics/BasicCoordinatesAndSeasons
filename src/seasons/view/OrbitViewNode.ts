@@ -10,14 +10,17 @@
  */
 
 import { Multilink, type TReadOnlyProperty } from "scenerystack/axon";
-import { Vector2 } from "scenerystack/dot";
+import { Vector2, Vector3 } from "scenerystack/dot";
 import { Shape } from "scenerystack/kite";
 import { Circle, DragListener, KeyboardListener, Node, Path, Text } from "scenerystack/scenery";
 import { PhetFont } from "scenerystack/scenery-phet";
 import BasicCoordinatesAndSeasonsColors from "../../BasicCoordinatesAndSeasonsColors.js";
 import { CONTROL_FONT_SIZE, OBLIQUITY_DEGREES } from "../../BasicCoordinatesAndSeasonsConstants.js";
 import BasicCoordinatesAndSeasonsHotkeyData from "../../common/BasicCoordinatesAndSeasonsHotkeyData.js";
-import { degToRad, normalizeDegrees } from "../../common/SkyCoordinates.js";
+import { type EarthShorePoint, getEarthShorePolygons } from "../../common/model/EarthShoreData.js";
+import { degToRad, normalizeDegrees, radToDeg } from "../../common/SkyCoordinates.js";
+import { SkyProjection } from "../../common/SkyProjection.js";
+import { addFrontHemisphereSphericalPolygon } from "../../common/view/skyGraphics.js";
 import type { SeasonsModel } from "../model/SeasonsModel.js";
 
 export type OrbitViewNodeOptions = {
@@ -30,10 +33,19 @@ export type OrbitViewNodeOptions = {
   seasonLabels: { marchEquinox: string; juneSolstice: string; septemberEquinox: string; decemberSolstice: string };
 };
 
-const EARTH_RADIUS = 9;
+const EARTH_RADIUS = 12;
 const SUN_RADIUS = 14;
-const AXIS_HALF_LENGTH = 16;
+const AXIS_HALF_LENGTH = 18;
 const LONGITUDE_STEP = 5;
+
+/** Converts a unit shore-data point (earth-fixed) into an RA-frame direction. */
+const shorePointToVector = (point: EarthShorePoint): Vector3 => {
+  const lonHours = (Math.atan2(point.y, point.x) / (2 * Math.PI)) * 24;
+  const latDeg = radToDeg(Math.asin(point.z));
+  const raRad = (lonHours / 24) * 2 * Math.PI;
+  const cosLat = Math.cos(degToRad(latDeg));
+  return new Vector3(cosLat * Math.cos(raRad), cosLat * Math.sin(raRad), Math.sin(degToRad(latDeg)));
+};
 
 export class OrbitViewNode extends Node {
   public constructor(model: SeasonsModel, options: OrbitViewNodeOptions) {
@@ -76,25 +88,69 @@ export class OrbitViewNode extends Node {
       ],
     });
 
-    // Earth: a small blue globe with a tilted N (red) / S (blue) axis, fixed in space.
-    const earthGlobe = new Circle(EARTH_RADIUS, {
+    // Earth: a small textured globe (ocean + continents) with a tilted N (red) /
+    // S (blue) axis, fixed in space. The globe is drawn pole-up in a local
+    // orthographic projection, then the whole node is leaned by the obliquity so
+    // its axis points 23.4° off vertical (toward +x), matching the NAAP orbit view.
+    const tilt = degToRad(OBLIQUITY_DEGREES);
+
+    const ocean = new Circle(EARTH_RADIUS, {
       fill: BasicCoordinatesAndSeasonsColors.earthOceanColorProperty,
       stroke: BasicCoordinatesAndSeasonsColors.cardinalLabelColorProperty,
       lineWidth: 1,
     });
-    // Fixed screen axis direction (N pole up, tilted 23.4° toward +x).
-    const tilt = degToRad(OBLIQUITY_DEGREES);
-    const axisUnit = new Vector2(Math.sin(tilt), -Math.cos(tilt));
-    const northAxis = new Path(
-      new Shape().moveTo(0, 0).lineTo(axisUnit.x * AXIS_HALF_LENGTH, axisUnit.y * AXIS_HALF_LENGTH),
-      { stroke: "#ff5252", lineWidth: 2 },
+    // Fixed pole-up camera, tipped slightly down so the northern continents show.
+    const globeProjection = new SkyProjection({
+      center: Vector2.ZERO,
+      radius: EARTH_RADIUS,
+      azimuth: degToRad(200),
+      elevation: -0.35,
+    });
+    const land = new Path(null, {
+      fill: BasicCoordinatesAndSeasonsColors.earthLandColorProperty,
+      stroke: BasicCoordinatesAndSeasonsColors.sphereOutlineColorProperty,
+      lineWidth: 0.25,
+      clipArea: Shape.circle(0, 0, EARTH_RADIUS),
+    });
+    const landShape = new Shape();
+    for (const polygon of getEarthShorePolygons("low")) {
+      addFrontHemisphereSphericalPolygon(
+        globeProjection,
+        polygon.map(shorePointToVector),
+        landShape,
+        (v) => globeProjection.project(v),
+        Vector2.ZERO,
+        EARTH_RADIUS,
+      );
+    }
+    land.shape = landShape;
+
+    // Axis drawn vertical here; the enclosing node's rotation leans it by the tilt.
+    const northAxis = new Path(new Shape().moveTo(0, 0).lineTo(0, -AXIS_HALF_LENGTH), {
+      stroke: "#ff5252",
+      lineWidth: 2,
+    });
+    const southAxis = new Path(new Shape().moveTo(0, 0).lineTo(0, AXIS_HALF_LENGTH), {
+      stroke: "#5b8dd6",
+      lineWidth: 2,
+    });
+    const tiltedGlobe = new Node({ children: [southAxis, ocean, land, northAxis], rotation: tilt });
+
+    // Day/night shade: the globe half facing away from the Sun (at the orbit centre).
+    // The Sun sits at screen centre, so the lit face always points inward and the
+    // night face outward; the half-disc is rotated so its +x half covers the outward
+    // (night) hemisphere. Because the polar axis is offset from the disc centre, this
+    // flat terminator still shows polar day/night as Earth moves around the orbit.
+    const shade = new Path(
+      new Shape()
+        .moveTo(0, -EARTH_RADIUS)
+        .arc(0, 0, EARTH_RADIUS, -Math.PI / 2, Math.PI / 2, false)
+        .close(),
+      { fill: "#0a1626", opacity: 0.55, pickable: false },
     );
-    const southAxis = new Path(
-      new Shape().moveTo(0, 0).lineTo(-axisUnit.x * AXIS_HALF_LENGTH, -axisUnit.y * AXIS_HALF_LENGTH),
-      { stroke: "#5b8dd6", lineWidth: 2 },
-    );
+
     const earth = new Node({
-      children: [southAxis, earthGlobe, northAxis],
+      children: [tiltedGlobe, shade],
       cursor: "pointer",
       tagName: "div",
       focusable: true,
@@ -105,7 +161,10 @@ export class OrbitViewNode extends Node {
     super({ children: [orbitPath, sun, labels, earth] });
 
     Multilink.multilink([model.sunEclipticLongitudeProperty], (lambda) => {
-      earth.translation = earthPosition(lambda);
+      const position = earthPosition(lambda);
+      earth.translation = position;
+      // Point the shade's +x (night) half outward, away from the Sun at the centre.
+      shade.rotation = Math.atan2(position.y, position.x);
     });
 
     const setLongitudeFromPoint = (globalPoint: Vector2): void => {

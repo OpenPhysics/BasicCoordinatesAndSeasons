@@ -11,17 +11,32 @@
  */
 
 import { Multilink, type TReadOnlyProperty } from "scenerystack/axon";
-import { Matrix3, Vector2 } from "scenerystack/dot";
+import { Matrix3, Vector2, Vector3 } from "scenerystack/dot";
 import { Shape } from "scenerystack/kite";
 import { Circle, DragListener, KeyboardListener, Node, Path, Text } from "scenerystack/scenery";
 import { ArrowNode, PhetFont } from "scenerystack/scenery-phet";
 import BasicCoordinatesAndSeasonsColors from "../../BasicCoordinatesAndSeasonsColors.js";
 import { LATITUDE_RANGE, LOCATION_STEP_DEGREES, OBLIQUITY_DEGREES } from "../../BasicCoordinatesAndSeasonsConstants.js";
 import BasicCoordinatesAndSeasonsHotkeyData from "../../common/BasicCoordinatesAndSeasonsHotkeyData.js";
-import { degToRad, radToDeg } from "../../common/SkyCoordinates.js";
+import { type EarthShorePoint, getEarthShorePolygons } from "../../common/model/EarthShoreData.js";
+import { degToRad, raDecToVector3, radToDeg } from "../../common/SkyCoordinates.js";
+import { SkyProjection } from "../../common/SkyProjection.js";
 import { StickFigureNode } from "../../common/view/StickFigureNode.js";
+import { addFrontHemisphereSphericalPolygon } from "../../common/view/skyGraphics.js";
 import { StringManager } from "../../i18n/StringManager.js";
 import type { SeasonsModel } from "../model/SeasonsModel.js";
+
+// Ecliptic (orbital) north pole in the RA/Dec frame; kept "up" so the axis leans by season.
+const ECLIPTIC_POLE = raDecToVector3(18, 90 - OBLIQUITY_DEGREES);
+
+/** Converts a unit shore-data point (earth-fixed) into an RA-frame direction. */
+const shorePointToVector = (point: EarthShorePoint): Vector3 => {
+  const lonHours = (Math.atan2(point.y, point.x) / (2 * Math.PI)) * 24;
+  const latDeg = radToDeg(Math.asin(point.z));
+  const raRad = (lonHours / 24) * 2 * Math.PI;
+  const cosLat = Math.cos(degToRad(latDeg));
+  return new Vector3(cosLat * Math.cos(raRad), cosLat * Math.sin(raRad), Math.sin(degToRad(latDeg)));
+};
 
 const POLAR_CIRCLE_LAT = 90 - OBLIQUITY_DEGREES;
 
@@ -50,6 +65,18 @@ export class EarthCloseUpNode extends Node {
       fill: BasicCoordinatesAndSeasonsColors.earthOceanColorProperty,
       stroke: BasicCoordinatesAndSeasonsColors.cardinalLabelColorProperty,
       lineWidth: 1,
+    });
+
+    // Continents: a real orthographic globe viewed from the side (Sun to the right,
+    // ecliptic pole up). The night overlay below darkens the far (left) half. The
+    // camera is driven by the Sun direction so the face turns with the date.
+    const projection = new SkyProjection({ center: Vector2.ZERO, radius: r });
+    const land = new Path(null, {
+      fill: BasicCoordinatesAndSeasonsColors.earthLandColorProperty,
+      stroke: BasicCoordinatesAndSeasonsColors.sphereOutlineColorProperty,
+      lineWidth: 0.35,
+      opacity: 0.95,
+      clipArea: Shape.circle(0, 0, r),
     });
 
     // Night hemisphere: the left half (terminator is the vertical diameter).
@@ -121,7 +148,42 @@ export class EarthCloseUpNode extends Node {
       ...(options.accessibleHelpText && { accessibleHelpText: options.accessibleHelpText }),
     });
 
-    super({ children: [earth, night, grid, southAxis, northAxis, rayLayer, subsolarDot, labelsLayer, observer] });
+    super({
+      children: [earth, land, night, grid, southAxis, northAxis, rayLayer, subsolarDot, labelsLayer, observer],
+    });
+
+    // Drive the side camera from the Sun direction: the Sun sits at the right limb
+    // (screen-right = Sun), the ecliptic pole is up, so continents turn with the date
+    // and Earth's axis leans with the season. Redraws the land each time.
+    Multilink.multilink([model.sunRightAscensionProperty, model.sunDeclinationProperty], (raHours, decDeg) => {
+      const sun = raDecToVector3(raHours, decDeg);
+      const toward = sun.cross(ECLIPTIC_POLE).normalized().negated(); // Sun on the right limb
+      const right = toward.cross(ECLIPTIC_POLE).normalized();
+      projection.frameMatrixProperty.value = Matrix3.rowMajor(
+        right.x,
+        right.y,
+        right.z,
+        toward.x,
+        toward.y,
+        toward.z,
+        ECLIPTIC_POLE.x,
+        ECLIPTIC_POLE.y,
+        ECLIPTIC_POLE.z,
+      );
+
+      const landShape = new Shape();
+      for (const polygon of getEarthShorePolygons("high")) {
+        addFrontHemisphereSphericalPolygon(
+          projection,
+          polygon.map(shorePointToVector),
+          landShape,
+          (v) => projection.project(v),
+          Vector2.ZERO,
+          r,
+        );
+      }
+      land.shape = landShape;
+    });
 
     Multilink.multilink(
       [model.sunDeclinationProperty, model.latitudeProperty, model.subsolarPointVisibleProperty],

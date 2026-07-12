@@ -183,6 +183,97 @@ export const addFrontHemisphereSphericalPolygon = (
 };
 
 /**
+ * Builds the screen Shape of the night-side (unlit) region of an orthographically
+ * projected globe: the part of the near hemisphere that faces away from
+ * `sunDirection`. The boundary is the front-facing arc of the day/night terminator
+ * (the great circle 90° from the Sun) closed along the night portion of the globe's
+ * limb. `mapPoint` projects a world unit vector to the disc's screen point (scaled
+ * about `center`); `discRadius` is the disc radius in px. The caller fills the
+ * result with a translucent shade and (optionally) clips it to the globe disc.
+ */
+export const nightShadeShape = (
+  projection: SkyProjection,
+  sunDirection: Vector3,
+  mapPoint: (point: Vector3) => Vector2,
+  center: Vector2,
+  discRadius: number,
+): Shape => {
+  const shape = new Shape();
+  const viewSun = projection.viewMatrixProperty.value.timesVector3(sunDirection);
+  // Screen-space angle from the disc centre toward the Sun's projected position
+  // (screen X = −viewSun.x, screen Y = −viewSun.z, matching SkyProjection.project).
+  const sunScreenAngle = Math.atan2(-viewSun.z, -viewSun.x);
+
+  const terminator = smallCirclePoints(sunDirection, 90);
+  const count = terminator.length;
+  const depths = terminator.map((v) => worldDepth(projection, v));
+  const anyFront = depths.some((d) => d >= 0);
+  const anyBack = depths.some((d) => d < 0);
+
+  // Terminator entirely on one hemisphere ⇒ the whole near side is lit or dark. It
+  // is dark (full shade) only when the Sun sits behind the viewer (depth < 0).
+  if (!(anyFront && anyBack)) {
+    if (viewSun.y < 0) {
+      shape.circle(center.x, center.y, discRadius);
+    }
+    return shape;
+  }
+
+  // Extract the single contiguous front-facing arc: rotate the ring so its array
+  // seam falls inside the hidden (back) arc, then collect the front samples.
+  let backStart = 0;
+  for (let i = 0; i < count; i++) {
+    if ((depths[i] ?? 0) < 0) {
+      backStart = i;
+      break;
+    }
+  }
+  const front: Vector2[] = [];
+  for (let i = 0; i < count; i++) {
+    const index = (backStart + i) % count;
+    const vertex = terminator[index];
+    if (vertex && (depths[index] ?? 0) >= 0) {
+      front.push(mapPoint(vertex));
+    }
+  }
+  if (front.length < 2) {
+    if (viewSun.y < 0) {
+      shape.circle(center.x, center.y, discRadius);
+    }
+    return shape;
+  }
+
+  // Trace the front terminator arc, then close it along the limb — sweeping the arc
+  // that lies on the night (anti-Sun) side of the disc.
+  const first = front[0];
+  const last = front[front.length - 1];
+  if (!(first && last)) {
+    return shape;
+  }
+  shape.moveToPoint(first);
+  for (let i = 1; i < front.length; i++) {
+    const point = front[i];
+    if (point) {
+      shape.lineToPoint(point);
+    }
+  }
+
+  const startAngle = Math.atan2(last.y - center.y, last.x - center.x);
+  const endAngle = Math.atan2(first.y - center.y, first.x - center.x);
+  const nightAngle = sunScreenAngle + Math.PI; // limb midpoint opposite the Sun
+  const ccwSweep = mod2pi(endAngle - startAngle);
+  const ccw = Math.cos(startAngle + ccwSweep / 2 - nightAngle) >= 0;
+  const sweep = ccw ? ccwSweep : mod2pi(startAngle - endAngle);
+  const steps = Math.max(2, Math.ceil((sweep * 12) / Math.PI));
+  for (let s = 1; s <= steps; s++) {
+    const angle = startAngle + ((ccw ? 1 : -1) * sweep * s) / steps;
+    shape.lineToPoint(new Vector2(center.x + discRadius * Math.cos(angle), center.y + discRadius * Math.sin(angle)));
+  }
+  shape.close();
+  return shape;
+};
+
+/**
  * Appends only the near-hemisphere portion of a polyline, clipping each segment
  * at the view horizon so chords never cut across the sphere interior.
  */

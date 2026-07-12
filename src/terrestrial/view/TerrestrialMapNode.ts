@@ -207,7 +207,8 @@ export class TerrestrialMapNode extends Node {
     });
     const labelLats = [0, OBLIQUITY_DEGREES, -OBLIQUITY_DEGREES, polarCircleLatitude, -polarCircleLatitude];
     circleLabels.children.forEach((label, i) => {
-      label.left = 4;
+      // Just inside the checkered neatline so the names clear the frame cells.
+      label.left = 10;
       label.centerY = latToY(labelLats[i] ?? 0);
     });
     mapFeaturesVisibleProperty.link((visible) => {

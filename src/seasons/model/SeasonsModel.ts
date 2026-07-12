@@ -131,7 +131,7 @@ export class SeasonsModel implements TModel {
   public step(dt: number): void {
     this.timer.step(dt);
     if (this.timer.isPlayingProperty.value) {
-      const delta = (360 / DAYS_PER_YEAR) * SEASONS_ANIMATION_DAYS_PER_SECOND * dt;
+      const delta = (360 / DAYS_PER_YEAR) * SEASONS_ANIMATION_DAYS_PER_SECOND * this.timer.timeSpeedMultiplier * dt;
       const next = (this.sunEclipticLongitudeProperty.value + delta) % 360;
       this.sunEclipticLongitudeProperty.value = next < 0 ? next + 360 : next;
     }

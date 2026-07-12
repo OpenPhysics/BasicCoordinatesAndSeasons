@@ -8,28 +8,22 @@
  * the ±180° seam with no gap.
  *
  * Panning is done by rendering the geographically-anchored world (land, graticule,
- * equator, meridian labels, and any caller-supplied overlay) three times, tiled at
- * x ∈ {−width, 0, +width}, inside a clipped viewport. The tile container is shifted
- * by the pan offset so at least one copy always covers every screen column — the
- * standard infinite-scroll trick. The observer cursor is a single node positioned at
- * the (mod-width) screen column for its longitude; it is not tiled because a point
- * marker only ever needs one on-screen position.
+ * equator, and any caller-supplied overlay) three times, tiled at x ∈ {−width, 0,
+ * +width}, inside a clipped viewport. The tile container is shifted by the pan offset
+ * so at least one copy always covers every screen column — the standard infinite-scroll
+ * trick. The observer cursor is a single node positioned at the (mod-width) screen
+ * column for its longitude; it is not tiled because a point marker only ever needs one
+ * on-screen position.
+ *
+ * The frame is drawn outside the geography: a checkered neatline hugs the edges, the
+ * meridian (longitude) labels pan in a clipped strip above the top edge, and the
+ * latitude labels sit fixed just outside the left edge.
  */
 
 import { Multilink, type NumberProperty, type TReadOnlyProperty } from "scenerystack/axon";
-import { clamp, Vector2 } from "scenerystack/dot";
+import { Vector2 } from "scenerystack/dot";
 import { Shape } from "scenerystack/kite";
-import {
-  Circle,
-  DragListener,
-  KeyboardListener,
-  Line,
-  Node,
-  Path,
-  type ProfileColorProperty,
-  Rectangle,
-  Text,
-} from "scenerystack/scenery";
+import { Circle, DragListener, KeyboardListener, Line, Node, Path, Rectangle, Text } from "scenerystack/scenery";
 import { PhetFont } from "scenerystack/scenery-phet";
 import BasicCoordinatesAndSeasonsColors from "../../BasicCoordinatesAndSeasonsColors.js";
 import {
@@ -40,6 +34,8 @@ import {
 import { StringManager } from "../../i18n/StringManager.js";
 import BasicCoordinatesAndSeasonsHotkeyData from "../BasicCoordinatesAndSeasonsHotkeyData.js";
 import { type EarthShorePoint, getEarthShorePolygons } from "../model/EarthShoreData.js";
+import { CheckeredBorderNode } from "./CheckeredBorderNode.js";
+import { CoordinateIndicatorNode } from "./CoordinateIndicatorNode.js";
 
 /** Canonical (pan-free) map coordinate helpers passed to overlay factories. */
 export type FlatMapWorldContext = {
@@ -211,6 +207,16 @@ const meridianLabel = (longitude: number): string => {
   return value > 180 ? `${360 - value}° W` : `${value}° E`;
 };
 
+/** Thickness (px) of the checkered neatline. */
+const BORDER_THICKNESS = 7;
+/** Gap (px) between the map edge and the coordinate number labels sitting outside it. */
+const LABEL_GAP = 3;
+/** Height (px) of the clipped strip above the map that holds the panning meridian labels. */
+const TOP_LABEL_STRIP = 16;
+/** Checker cells: 8 across (every 45°) and 6 down (every 30°). */
+const BORDER_SEGMENTS_X = 8;
+const BORDER_SEGMENTS_Y = 6;
+
 export class FlatEarthMapNode extends Node {
   public constructor(
     latitudeProperty: NumberProperty,
@@ -268,47 +274,73 @@ export class FlatEarthMapNode extends Node {
         lineWidth: 1,
       });
 
-      // Meridian labels along the top, one per 45°. Text is fixed per meridian; the
-      // labels pan and wrap with the tile they live in.
-      const meridianLabels = new Node();
-      for (let lon = -180; lon < 180; lon += 45) {
-        meridianLabels.addChild(
-          new Text(meridianLabel(lon), {
-            font: labelFont,
-            fill: BasicCoordinatesAndSeasonsColors.cardinalLabelColorProperty,
-            centerX: lonToX(lon),
-            top: 2,
-          }),
-        );
-      }
-
-      // Latitude labels along the left edge, one per 30°.
-      const latitudeLabels = new Node();
-      for (let lat = -60; lat <= 60; lat += 30) {
-        latitudeLabels.addChild(
-          new Text(`${Math.abs(lat)}°${lat > 0 ? "N" : lat < 0 ? "S" : ""}`, {
-            font: labelFont,
-            fill: BasicCoordinatesAndSeasonsColors.cardinalLabelColorProperty,
-            left: 2,
-            centerY: latToY(lat),
-          }),
-        );
-      }
-
-      const children: Node[] = [landPath, gridPath, equatorLine, meridianLabels, latitudeLabels];
+      const children: Node[] = [landPath, gridPath, equatorLine];
       if (overlayFactory) {
         children.push(overlayFactory(worldContext));
       }
       return new Node({ children });
     };
 
-    // Three tiles at −width, 0, +width. The container is shifted by the pan offset.
+    // Three tiles at −width, 0, +width. The container is shifted by the pan offset,
+    // inside a stationary clipped viewport so the wrap stays invisible.
     const tiles = new Node({
       children: [-width, 0, width].map((offsetX) => {
         const tile = createWorldTile();
         tile.x = offsetX;
         return tile;
       }),
+    });
+    const tilesViewport = new Node({ children: [tiles], clipArea: Shape.rect(0, 0, width, height) });
+
+    // Meridian labels live just ABOVE the top edge (outside the map) and pan with the
+    // content; tiled and clipped to a strip so copies never spill past the map width.
+    const createTopLabelTile = (): Node => {
+      const node = new Node({ pickable: false });
+      for (let lon = -180; lon < 180; lon += 45) {
+        node.addChild(
+          new Text(meridianLabel(lon), {
+            font: labelFont,
+            fill: BasicCoordinatesAndSeasonsColors.cardinalLabelColorProperty,
+            centerX: lonToX(lon),
+            bottom: -LABEL_GAP,
+          }),
+        );
+      }
+      return node;
+    };
+    const topLabelTiles = new Node({
+      children: [-width, 0, width].map((offsetX) => {
+        const tile = createTopLabelTile();
+        tile.x = offsetX;
+        return tile;
+      }),
+    });
+    const topLabelStrip = new Node({
+      children: [topLabelTiles],
+      pickable: false,
+      clipArea: Shape.rect(0, -TOP_LABEL_STRIP, width, TOP_LABEL_STRIP),
+    });
+
+    // Latitude labels sit just outside the left edge; parallels are horizontal so
+    // these never pan.
+    const latitudeLabels = new Node({ pickable: false });
+    for (let lat = -60; lat <= 60; lat += 30) {
+      latitudeLabels.addChild(
+        new Text(`${Math.abs(lat)}°${lat > 0 ? "N" : lat < 0 ? "S" : ""}`, {
+          font: labelFont,
+          fill: BasicCoordinatesAndSeasonsColors.cardinalLabelColorProperty,
+          right: -LABEL_GAP,
+          centerY: latToY(lat),
+        }),
+      );
+    }
+
+    // Alternating black/white cartographic neatline, cells sized to the grid
+    // (45° across, 30° down).
+    const checkeredBorder = new CheckeredBorderNode(width, height, {
+      thickness: BORDER_THICKNESS,
+      segmentsX: BORDER_SEGMENTS_X,
+      segmentsY: BORDER_SEGMENTS_Y,
     });
 
     // Transparent full-map input catcher for drag-to-pan. Sits above the geography
@@ -329,100 +361,36 @@ export class FlatEarthMapNode extends Node {
 
     // ── Coordinate indicator (optional) ─────────────────────────────────────────
     // Variable-length segments whose length encodes the value, like NAAP's
-    // mapExplorer `moveCursor`:
-    //   - longitude: a segment along the EQUATOR from the Greenwich meridian (0°)
-    //     to the observer's longitude (east = right, west = left)
-    //   - latitude:  a segment along the observer's MERIDIAN from the equator (0°)
-    //     to the observer's latitude (north = up, south = down)
-    // The two meet at the equator on the observer's meridian. Non-interactive.
-    let indicatorScreenX = 0;
-    let indicatorY = 0;
-    let indicatorGreenwichX = 0;
-    let indicatorLonDelta = 0;
-    const indicatorChildren: Node[] = [];
-    let updateIndicator: (() => void) | null = null;
-    if (coordinateIndicator) {
-      const indicatorLabelFont = new PhetFont({ size: 9, weight: "bold" });
-      const makePill = (labelProperty: TReadOnlyProperty<string>, colorProperty: ProfileColorProperty): Node => {
-        const text = new Text(labelProperty, { font: indicatorLabelFont, fill: colorProperty, pickable: false });
-        const bg = new Rectangle(0, 0, 1, 1, {
-          fill: BasicCoordinatesAndSeasonsColors.panelBackgroundColorProperty,
-          opacity: 0.85,
-          cornerRadius: 3,
-          pickable: false,
-        });
-        text.localBoundsProperty.link((bounds) => {
-          bg.rectX = bounds.minX - 3;
-          bg.rectY = bounds.minY - 2;
-          bg.rectWidth = bounds.width + 6;
-          bg.rectHeight = bounds.height + 4;
-        });
-        return new Node({ children: [bg, text], pickable: false });
-      };
-
-      // Longitude segment lives on the equator; drawn as a Path so it can be tiled
-      // across the ±180° seam (the segment may wrap when Greenwich is off-screen).
-      const lonIndicatorPath = new Path(null, {
-        stroke: BasicCoordinatesAndSeasonsColors.longitudeIndicatorColorProperty,
-        lineWidth: 2,
-        pickable: false,
-      });
-      // Latitude segment lives on the observer's meridian (never wraps vertically).
-      const latLine = new Line(0, 0, 0, 0, {
-        stroke: BasicCoordinatesAndSeasonsColors.latitudeIndicatorColorProperty,
-        lineWidth: 2,
-        pickable: false,
-      });
-      const lonPill = makePill(
-        coordinateIndicator.longitudeLabelProperty,
-        BasicCoordinatesAndSeasonsColors.longitudeIndicatorColorProperty,
-      );
-      const latPill = makePill(
-        coordinateIndicator.latitudeLabelProperty,
-        BasicCoordinatesAndSeasonsColors.latitudeIndicatorColorProperty,
-      );
-      indicatorChildren.push(lonIndicatorPath, latLine, lonPill, latPill);
-
-      const reposition = (): void => {
-        const equatorY = latToY(0);
-        // Longitude segment along the equator from Greenwich by the signed delta.
-        // Three tiled copies (−width, 0, +width) guarantee a visible, contiguous
-        // segment under the clipped viewport even when it crosses the seam.
-        const a = indicatorGreenwichX;
-        const b = indicatorGreenwichX + indicatorLonDelta;
-        const lonShape = new Shape();
-        for (const off of [-width, 0, width]) {
-          lonShape.moveTo(a + off, equatorY).lineTo(b + off, equatorY);
-        }
-        lonIndicatorPath.shape = lonShape;
-        // Latitude segment along the observer's meridian, equator → cursor.
-        latLine.setLine(indicatorScreenX, equatorY, indicatorScreenX, indicatorY);
-
-        // Value labels at each segment's midpoint.
-        const lonMidX = mod(indicatorGreenwichX + indicatorLonDelta / 2, width);
-        const lonHalfW = lonPill.width / 2;
-        const lonHalfH = lonPill.height / 2;
-        lonPill.center = new Vector2(
-          clamp(lonMidX, lonHalfW, width - lonHalfW),
-          clamp(equatorY - lonHalfH - 3, lonHalfH, height - lonHalfH),
-        );
-        const latMidY = (equatorY + indicatorY) / 2;
-        const latHalfW = latPill.width / 2;
-        const latHalfH = latPill.height / 2;
-        latPill.center = new Vector2(
-          clamp(indicatorScreenX + latHalfW + 4, latHalfW, width - latHalfW),
-          clamp(latMidY, latHalfH, height - latHalfH),
-        );
-      };
-      updateIndicator = reposition;
-      lonPill.localBoundsProperty.link(reposition);
-      latPill.localBoundsProperty.link(reposition);
-    }
-    const indicatorLayer = new Node({ pickable: false, children: indicatorChildren });
+    // mapExplorer `moveCursor`: a longitude segment along the equator from Greenwich
+    // and a latitude segment along the observer's meridian. Shared with the sky map.
+    const indicator = coordinateIndicator
+      ? new CoordinateIndicatorNode({
+          width,
+          height,
+          horizontalLabelProperty: coordinateIndicator.longitudeLabelProperty,
+          verticalLabelProperty: coordinateIndicator.latitudeLabelProperty,
+          horizontalColorProperty: BasicCoordinatesAndSeasonsColors.longitudeIndicatorColorProperty,
+          verticalColorProperty: BasicCoordinatesAndSeasonsColors.latitudeIndicatorColorProperty,
+        })
+      : null;
+    // The indicator is tiled across the ±width seam, so clip it to the map face.
+    const indicatorLayer = indicator
+      ? new Node({ children: [indicator], clipArea: Shape.rect(0, 0, width, height) })
+      : new Node();
 
     super({
-      children: [oceanRect, tiles, panTarget, indicatorLayer, cursor],
-      clipArea: Shape.rect(0, 0, width, height),
+      // Only the panning geography and the indicator are clipped to the map face;
+      // the neatline and the coordinate labels sit outside the frame and are not.
+      children: [
+        oceanRect,
+        tilesViewport,
+        panTarget,
+        checkeredBorder,
+        topLabelStrip,
+        latitudeLabels,
+        indicatorLayer,
+        cursor,
+      ],
       tagName: "div",
       focusable: true,
       accessibleName: controls.observerLocationStringProperty,
@@ -433,16 +401,21 @@ export class FlatEarthMapNode extends Node {
     const updatePan = (): void => {
       pixelShift = mod(lonToX(longitudeOffsetProperty.value) - width / 2, width);
       tiles.x = -pixelShift;
+      topLabelTiles.x = -pixelShift;
     };
     const updateCursor = (): void => {
-      indicatorScreenX = mod(lonToX(longitudeProperty.value) - pixelShift, width);
-      indicatorY = latToY(latitudeProperty.value);
-      cursor.translation = new Vector2(indicatorScreenX, indicatorY);
+      const markerScreenX = mod(lonToX(longitudeProperty.value) - pixelShift, width);
+      const markerY = latToY(latitudeProperty.value);
+      cursor.translation = new Vector2(markerScreenX, markerY);
       // Longitude indicator: equatorial segment from Greenwich (0°) by the signed
       // longitude, so its length encodes how far east/west of Greenwich the observer is.
-      indicatorGreenwichX = mod(lonToX(0) - pixelShift, width);
-      indicatorLonDelta = (longitudeProperty.value / 360) * width;
-      updateIndicator?.();
+      indicator?.update({
+        equatorY: latToY(0),
+        referenceScreenX: mod(lonToX(0) - pixelShift, width),
+        horizontalDeltaX: (longitudeProperty.value / 360) * width,
+        markerScreenX,
+        markerY,
+      });
     };
 
     longitudeOffsetProperty.link(() => {

@@ -24,6 +24,7 @@ import {
   addFrontHemispherePolyline,
   addFrontHemisphereSmoothPolyline,
   addFrontHemisphereSphericalPolygon,
+  nightShadeShape,
   smallCirclePoints,
 } from "./skyGraphics.js";
 
@@ -97,6 +98,14 @@ export type EarthGlobeNodeOptions = {
 
   /** City / map-feature overlays (Terrestrial screen only). Omitted elsewhere. */
   overlays?: GlobeOverlays;
+
+  /**
+   * Direction to the Sun as a unit vector in the equatorial (RA/Dec) frame. When
+   * provided, the globe's night hemisphere (the half facing away from the Sun) is
+   * shaded, showing which face is lit — the Seasons screen passes this. Omitted
+   * elsewhere, leaving the globe uniformly lit.
+   */
+  sunDirectionProperty?: TReadOnlyProperty<Vector3>;
 };
 
 const CITY_LABEL_FONT = new PhetFont(9);
@@ -138,6 +147,17 @@ export class EarthGlobeNode extends Node {
       fill: BasicCoordinatesAndSeasonsColors.observerColorProperty,
       stroke: BasicCoordinatesAndSeasonsColors.cardinalLabelColorProperty,
       lineWidth: 1,
+    });
+
+    // Day/night shade: the hemisphere facing away from the Sun (Seasons screen only,
+    // when a Sun direction is supplied). A translucent dark tint so land and grid
+    // still read faintly on the night side. Clipped to the globe disc.
+    const sunDirectionProperty = options?.sunDirectionProperty;
+    const shadePath = new Path(null, {
+      fill: "#0a1626",
+      opacity: 0.55,
+      pickable: false,
+      visible: !!sunDirectionProperty,
     });
 
     // ── Optional Terrestrial overlays: reference circles + date line + cities ──
@@ -280,7 +300,7 @@ export class EarthGlobeNode extends Node {
 
     this.children = overlays
       ? [disc, landPath, gridPath, featuresLayer, citiesLayer, indicatorLayer, featureLabelsLayer, observerDot]
-      : [disc, landPath, gridPath, observerDot];
+      : [disc, landPath, gridPath, shadePath, observerDot];
 
     if (overlays) {
       overlays.mapFeaturesVisibleProperty.link((visible) => {
@@ -381,6 +401,7 @@ export class EarthGlobeNode extends Node {
       const clip = Shape.circle(projection.center.x, projection.center.y, globeRadius);
       landPath.clipArea = clip;
       gridPath.clipArea = clip;
+      shadePath.clipArea = clip;
       // Reference circles / date line hug the surface too; city labels stay
       // unclipped so names near the limb remain readable.
       featureCirclesPath.clipArea = clip;
@@ -395,6 +416,8 @@ export class EarthGlobeNode extends Node {
       addFrontHemisphereSphericalPolygon(projection, vertices, shape, mapGlobePoint, projection.center, globeRadius);
     };
 
+    const shadeSunProperty: TReadOnlyProperty<Vector3> = sunDirectionProperty ?? new Property(new Vector3(0, 0, 1));
+
     Multilink.multilink(
       [
         projection.viewMatrixProperty,
@@ -403,10 +426,16 @@ export class EarthGlobeNode extends Node {
         siderealTimeProperty,
         earthMapResolutionProperty,
         precessionAngleProperty,
+        shadeSunProperty,
       ],
-      (_m, latitude, longitude, lst, resolution, precessionHours) => {
+      (_m, latitude, longitude, lst, resolution, precessionHours, sunDirection) => {
         disc.center = projection.center;
         applyGlobeClip();
+
+        // Day/night terminator: shade the hemisphere facing away from the Sun.
+        if (sunDirectionProperty) {
+          shadePath.shape = nightShadeShape(projection, sunDirection, mapGlobePoint, projection.center, globeRadius);
+        }
 
         // The sidereal time is *local* to the observer, so the prime meridian sits at the
         // Greenwich sidereal time, GST = LST − longitude. Anchoring the geography to GST keeps

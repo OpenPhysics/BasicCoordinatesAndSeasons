@@ -4,86 +4,49 @@ Sim-specific context for AI assistants. General SceneryStack guidance: [OpenPhys
 
 ## Project
 
-A three-screen SceneryStack simulation porting the NAAP **Basic Coordinates and Seasons**
-lab (astroUNL `naap/motion1`), scaffolded from `TemplateSingleSim`. **Fully implemented** —
-all three screens have working models, spherical-astronomy physics, interactive 3D views
-(celestial sphere, Earth globe, orbit), a bright-star catalog, and coordinate readouts. The
-port is complete and merged to `main`; treat the code as the source of truth.
+SceneryStack port of the NAAP **Basic Coordinates and Seasons** lab ([astro.unl.edu/naap/motion1](https://astro.unl.edu/naap/motion1/motion1.html)). Three screens teach terrestrial and celestial coordinate systems, then use them to explain the seasons. Architecture and formulas: [doc/model.md](doc/model.md), [doc/implementation-notes.md](doc/implementation-notes.md).
 
-- **Terrestrial Coordinates** (`src/terrestrial/`) — port of the NAAP terrestrial coordinate
-  explorers (`tc_flat.swf` = flat map, `tc_globe.swf` = globe): longitude and latitude on Earth.
-- **Celestial Coordinates** (`src/celestial/`) — port of the NAAP celestial equatorial coordinate
-  explorers (`cec_flat.swf` = flat sky map, `cec_sky.swf` = celestial sphere): right ascension
-  and declination.
-- **Seasons** (`src/seasons/`) — port of the NAAP *Seasons and Ecliptic Simulator*
-  (`seasons_ecliptic.swf`): Earth's orbit, axial tilt, the ecliptic, and the resulting seasons.
+- **Terrestrial Coordinates** (`src/terrestrial/`) — longitude and latitude on a flat map and orthographic globe.
+- **Celestial Coordinates** (`src/celestial/`) — right ascension and declination on a flat sky map and celestial sphere.
+- **Seasons** (`src/seasons/`) — Earth's tilted orbit, the ecliptic, and seasonal Sun angles.
 
-Shared code keeps the `BasicCoordinatesAndSeasons` prefix; per-screen code uses the
-`Terrestrial` / `Celestial` / `Seasons` prefixes. Concept-named folders, no `-screen` suffix.
-`RotatingSky/` (the motion2 lab port) is the closest sibling sim — its `SkyProjection` /
-horizon-and-celestial-sphere view code is directly relevant to the Celestial screen.
+Shared code uses the `BasicCoordinatesAndSeasons` prefix; per-screen code uses `Terrestrial` / `Celestial` / `Seasons`. Concept-named folders, no `-screen` suffix. `RotatingSky/` is the closest sibling — its `SkyProjection` / sky-view code is reused here.
 
 ## Key files
 
-| File | Purpose |
+| Area | Location |
 |---|---|
-| `src/BasicCoordinatesAndSeasonsColors.ts` | All `ProfileColorProperty` instances (default + projector profiles) |
-| `src/BasicCoordinatesAndSeasonsConstants.ts` | Named numeric constants (layout px, physics SI units) |
-| `src/BasicCoordinatesAndSeasonsNamespace.ts` | Namespace used by `.register()` |
-| `src/common/BasicCoordinatesAndSeasonsPanel.ts` | Pre-themed `Panel` wrapper |
-| `src/common/BasicCoordinatesAndSeasonsButtonOptions.ts` | Flat button-appearance option bundles + light-control-surface combo-box options |
-| `src/common/TimeModel.ts` | Composable play/pause + elapsed-time model for animated sims |
-| `src/i18n/StringManager.ts` | Singleton localized string accessor; per-screen name + a11y getters |
-| `src/main.ts` | Entry point; registers the three screens |
-| `src/terrestrial/TerrestrialScreen.ts` | `Screen<TerrestrialModel, TerrestrialScreenView>` wrapper |
-| `src/celestial/CelestialScreen.ts` | `Screen<CelestialModel, CelestialScreenView>` wrapper |
-| `src/seasons/SeasonsScreen.ts` | `Screen<SeasonsModel, SeasonsScreenView>` wrapper |
-| `src/preferences/basicCoordinatesAndSeasonsQueryParameters.ts` | `QueryStringMachine` parameters |
-| `scripts/decompile-flash.ts` | Extract ActionScript from the NAAP Flash `.swf` sources via JPEXS FFDec (→ `NAAP/decompiled/`) |
+| Screens | `src/terrestrial/TerrestrialScreen.ts`, `src/celestial/CelestialScreen.ts`, `src/seasons/SeasonsScreen.ts` |
+| Models | `terrestrial/model/TerrestrialModel.ts`, `celestial/model/CelestialModel.ts`, `seasons/model/SeasonsModel.ts` |
+| Shared physics | `src/common/SunPosition.ts` (seasons), `src/common/SkyCoordinates.ts`, `src/common/SkyProjection.ts`, `src/common/formatAngles.ts` |
+| Shared views | `src/common/view/skyGraphics.ts`, `CelestialSphereNode.ts`, `EarthGlobeNode.ts`, `FlatEarthMapNode.ts`, `attachSkyCameraInteraction.ts` |
+| Animation | `src/common/TimeModel.ts` (composed into `SeasonsModel` only) |
+| Colors / constants | `src/BasicCoordinatesAndSeasonsColors.ts`, `src/BasicCoordinatesAndSeasonsConstants.ts` |
+| Strings | `src/i18n/StringManager.ts` |
+| Preferences / query params | `src/preferences/` (`?earthMapResolution=`) |
+| Entry | `src/main.ts` |
 
-## Screens
+## Model
 
-Three screens registered in `src/main.ts`, in this order:
+Three **independent** screen models — no shared root state. Terrestrial and Celestial are static coordinate geometry (`step()` is a no-op). Only Seasons advances time while playing.
 
-1. **Terrestrial Coordinates** (`src/terrestrial/`)
-2. **Celestial Coordinates** (`src/celestial/`)
-3. **Seasons** (`src/seasons/`)
+| Screen | Model | Notes |
+|---|---|---|
+| **Terrestrial** | `TerrestrialModel` | λ/φ on flat map + globe; overlay toggles for meridians, tropics, cities, date line |
+| **Celestial** | `CelestialModel` | α/δ on flat sky map + celestial sphere; one shared guide star across both views; bright-star catalog + optional zodiac figures |
+| **Seasons** | `SeasonsModel` | Canonical state is `sunEclipticLongitudeProperty` (0° = March equinox); derived δ☉, α☉, noon altitude, calendar strings via `SunPosition.ts`; composes `TimeModel` |
 
-When implementing: put shared physics in `src/common/`, per-screen state in each
-`*Model.ts`. Per-screen a11y lives under `a11y.<screenKey>` in each locale JSON,
-exposed via `StringManager.getTerrestrialA11yStrings()` / `getCelestialA11yStrings()` /
-`getSeasonsA11yStrings()`. Make each `currentDetailsContent` a live `DerivedProperty`
-over model state and add `accessibleName`s to every interactive node.
+**Shared gotchas**
 
-## Decompiling the Flash sources
+- Seasons physics: `sin δ☉ = sin ε · sin λ☉` with fixed **ε = 23.4°**; animation ≈ **5 simulated days per real second** at normal speed.
+- `SkyCoordinates` alt-az helpers are tested and reserved for sibling sims; unused on Terrestrial/Celestial here.
+- Default earth map resolution is **`high`** (Natural Earth); overridable via Preferences and `?earthMapResolution=`.
+- Sphere paint order follows RotatingSky: back layer (dashed far side) → opaque fills → front layer → stars last.
 
-`npm run decompile` (script: `scripts/decompile-flash.ts`) extracts readable
-ActionScript from the NAAP Flash movies so the port can be diffed against the
-originals. The `.fla` files are old binary projects no tool reads directly, so the
-script decompiles their sibling compiled `.swf` via **JPEXS FFDec** (needs Java).
+## Accessibility
 
-```sh
-npm run decompile                 # the five lab explorers/simulators → NAAP/decompiled/<name>/scripts/*.as
-npm run decompile -- --all        # + supporting concept demos
-npm run decompile -- --list       # dry run: print what would be decompiled
-npm run decompile -- --setup      # one-time: download FFDec into tools/ffdec/
-```
-
-Default targets (matched byte-for-byte to the published lab animations):
-`mapExplorer010` (tc_flat), `longLatDemo014` (tc_globe), `simpleFlatSkyMap007` (cec_flat),
-`skyMap028` (cec_sky), `eclipticSimulator025` (seasons_ecliptic; lab shipped 024).
-Output goes to `NAAP/decompiled/` (git-ignored, along with `tools/ffdec/`). The
-decompiled AS is a **read-only reference** — transcribe the maths into typed TS in
-`src/`; don't vendor it.
-
-## npm scripts
-
-`start`/`dev` (vite) · `build` · `build:single` · `check` (tsc) · `lint`/`fix` (biome) ·
-`test` (vitest) · `icons` · `decompile` · `rename`. Gate: `npm run check && npm run lint && npm run build && npm test`.
-
-## PWA
-
-After `npm run build`, the sim is installable offline via Workbox (`dist/manifest.webmanifest`).
+Follows the shared [OpenPhysics accessibility convention](https://github.com/OpenPhysics/Baton/blob/main/ACCESSIBILITY.md).
+Each screen registers its own `*ScreenSummaryContent` (live `currentDetailsContent` over model state) via the view's `screenSummaryContent` super-option, and orders the PDOM through a wrapper `Node`. A11y strings live under `a11y.terrestrial`, `a11y.celestial`, and `a11y.seasons` in each locale JSON, via `StringManager.getTerrestrialA11yStrings()` / `getCelestialA11yStrings()` / `getSeasonsA11yStrings()`.
 
 ## Testing
 
@@ -91,11 +54,32 @@ Fleet-standard Vitest layout:
 
 | Path | Purpose |
 |---|---|
-| `vitest.config.ts` | Test environment + `setupFiles` when present; `execArgv: ["--expose-gc"]` with memory-leak suite |
-| `tests/setup.ts` | Canvas / AudioContext mocks + `init({ name: "…" })` before SceneryStack imports (when required) |
-| `tests/**/*.test.ts` | Model/physics unit tests — mirror `src/` under `tests/` |
+| `vitest.config.ts` | Test environment + `setupFiles`; `execArgv: ["--expose-gc"]` with memory-leak suite |
+| `tests/setup.ts` | Canvas / AudioContext mocks + `init({ name: "…" })` before SceneryStack imports |
+| `tests/**/*.test.ts` | Model/physics unit tests |
 | `tests/memory-leak.test.ts` | WeakRef + `forceGC` dispose regression (fleet pattern) |
+
+| File | Covers |
+|---|---|
+| `SunPosition.test.ts` | Cardinal δ☉/α☉, noon altitude, day↔λ☉, calendar |
+| `SkyCoordinates.test.ts` | RA/Dec vectors, alt-az round-trips |
+| `skyGraphics.test.ts` | Projection helpers |
+| `formatAngles.test.ts` | DMS formatting |
+| `TerrestrialModel.test.ts`, `CelestialModel.test.ts`, `SeasonsModel.test.ts` | Defaults, reset, stepping |
+| `TimeModel.test.ts` | Play/pause elapsed time |
+| `memory-leak.test.ts` | `TimeModel` dispose + GC |
 
 - Put unit tests only under root `tests/` (never co-locate or use `__tests__/`).
 - Run `npm test`. CI runs the suite when a `test` script is present.
-- Expand `memory-leak.test.ts` for components that add/remove nodes or link Properties at runtime (see OpticsLab).
+
+## Commands
+
+```bash
+npm run lint && npm run check && npm run build && npm test
+```
+
+## Development notes
+
+- **`npm run decompile`** extracts NAAP Flash ActionScript via JPEXS FFDec into gitignored `NAAP/decompiled/` — read-only reference; transcribe maths into typed TS in `src/`.
+- Screens are independent; see [doc/multi-screen.md](doc/multi-screen.md) for the fleet multi-screen pattern.
+- After `npm run build`, the sim is installable offline via Workbox (`dist/manifest.webmanifest`).

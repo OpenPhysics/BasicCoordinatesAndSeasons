@@ -1,17 +1,17 @@
 # Implementation Notes - Basic Coordinates and Seasons
 
+Developer-facing notes on the architecture. Educator-facing physics and pedagogy are in
+[model.md](./model.md). NAAP Flash control defaults and formula cross-checks live in
+[naap-control-inventory.md](./naap-control-inventory.md).
+
 ## Architecture Overview
 
-A three-screen SceneryStack sim porting the NAAP "Basic Coordinates and Seasons" lab
-(astroUNL `naap/motion1`). All three screens are implemented: a shared orthographic sky
-engine (ported from the sibling motion2 sim, `RotatingSky`) drives the globe / celestial
-sphere / flat-map views, and a small pure-math module (`SunPosition.ts`) supplies the
-seasons physics.
-
-### High-Level Architecture
+Basic Coordinates and Seasons is a three-screen SceneryStack sim porting the NAAP motion1 lab. A shared
+orthographic sky engine (ported from sibling sim **RotatingSky**) drives globe, celestial sphere, and
+flat-map views; pure-math modules supply seasons physics and angle utilities.
 
 ```
-main.ts
+src/main.ts
   ├─ TerrestrialScreen   (Screen<TerrestrialModel, TerrestrialScreenView>)   src/terrestrial/
   ├─ CelestialScreen     (Screen<CelestialModel, CelestialScreenView>)       src/celestial/
   └─ SeasonsScreen       (Screen<SeasonsModel, SeasonsScreenView>)           src/seasons/
@@ -20,99 +20,122 @@ Each screen folder:
   <Prefix>Screen.ts                     wires model + view, homeScreenIcon, keyboard help
   model/<Prefix>Model.ts                Property-based state (+ derived quantities)
   view/<Prefix>ScreenView.ts            visuals, screenSummaryContent + pdomOrder
-  view/<Prefix>ScreenSummaryContent.ts  live PDOM overview (a11y.<screenKey> strings)
+  view/<Prefix>ScreenSummaryContent.ts  live PDOM overview
   view/<Prefix>KeyboardHelpContent.ts   keyboard help dialog
 
 src/common/                              shared sky engine + sim-wide helpers
-  ├─ SkyCoordinates.ts                   pure angle math (deg/rad/hours, normalize)
-  ├─ SkyProjection.ts                    orthographic 3D→2D projector (rotatable camera)
-  ├─ SunPosition.ts                      seasons physics (δ☉, α☉, noon altitude, dates)
-  ├─ view/skyGraphics.ts                 great-circle / small-circle projection helpers
-  ├─ view/starGraphics.ts                star shape factory
-  ├─ view/CelestialSphereNode.ts         equator + ecliptic + grid on a projected sphere
-  ├─ view/CoordinateGuideNode.ts         draggable guide star with RA/Dec circle guides
-  ├─ view/EarthGlobeNode.ts              projected Earth globe (coastline polygons)
-  ├─ view/FlatEarthMapNode.ts            equirectangular map + draggable observer
-  ├─ view/EditableNumberFieldNode.ts     label + type-in numeric field
-  ├─ view/SkyReadoutNode.ts              paired editable coordinate fields
-  ├─ view/attachSkyCameraInteraction.ts  pointer + arrow-key camera rotation
+  ├─ SunPosition.ts                      seasons physics (pure, unit-tested)
+  ├─ SkyCoordinates.ts                   spherical astronomy (pure; alt-az API reserved/unused here)
+  ├─ SkyProjection.ts                    orthographic 3D→2D projector; dispose()
+  ├─ TimeModel.ts                        composable play/pause + elapsed time; dispose()
+  ├─ formatAngles.ts                     DMS / decimal formatting
+  ├─ view/skyGraphics.ts, starGraphics.ts, skyViewLayout.ts
+  ├─ view/CelestialSphereNode.ts, CoordinateGuideNode.ts, EarthGlobeNode.ts, FlatEarthMapNode.ts
+  ├─ view/EditableNumberFieldNode.ts, SkyReadoutNode.ts, attachSkyCameraInteraction.ts
   ├─ model/EarthShoreData*.ts            NAAP (low) + Natural Earth (high) coastlines
-  ├─ BasicCoordinatesAndSeasonsHotkeyData.ts  shared arrow-key bindings
-  ├─ BasicCoordinatesAndSeasonsScreenIcons.ts programmatic home-screen icons
-  ├─ BasicCoordinatesAndSeasonsPanel.ts        pre-themed panel
-  ├─ BasicCoordinatesAndSeasonsButtonOptions.ts flat button/combo-box option bundles
-  ├─ BasicCoordinatesAndSeasonsControlOptions.ts checkbox/number-control option bundles
-  └─ TimeModel.ts                              composable play/pause + elapsed time
+  ├─ BasicCoordinatesAndSeasonsPanel.ts, *ButtonOptions.ts, *ControlOptions.ts, *HotkeyData.ts
+  └─ BasicCoordinatesAndSeasonsScreenIcons.ts
 
 src/preferences/
-  ├─ BasicCoordinatesAndSeasonsPreferencesModel  earthMapResolution ("low"/"high")
-  ├─ BasicCoordinatesAndSeasonsPreferencesNode   Preferences → Simulation UI
-  └─ basicCoordinatesAndSeasonsQueryParameters   query-parameter declarations
+  ├─ BasicCoordinatesAndSeasonsPreferencesModel   earthMapResolution ("low"/"high")
+  ├─ BasicCoordinatesAndSeasonsPreferencesNode
+  └─ basicCoordinatesAndSeasonsQueryParameters    ?earthMapResolution=
 ```
 
-Data flows Model → View through AXON `Property` objects. Views observe Properties via
-`.link()` / `Multilink` and redraw reactively. The generic engine files (`SkyProjection`,
-`SkyCoordinates`, `skyGraphics`, …) keep their domain names — they are astronomy utilities,
-not sim-branded classes.
+Data flows Model → View through AXON `Property` objects. Generic engine files keep domain names
+(`SkyProjection`, `SkyCoordinates`, …) — astronomy utilities, not sim-branded classes.
 
 ## Porting map (NAAP → screens)
 
-| Screen | NAAP animation (published) | flashdev2 source (decompile target) |
+| Screen | NAAP animation | flashdev2 source (decompile target) |
 |---|---|---|
-| Terrestrial Coordinates | `tc_flat.swf` | `mapExplorer/mapExplorer010.swf` |
-| Terrestrial Coordinates | `tc_globe.swf` | `longLatDemo/longLatDemo014.swf` |
-| Celestial Coordinates | `cec_flat.swf` | `simpleFlatSkyMap/simpleFlatSkyMap007.swf` |
-| Celestial Coordinates | `cec_sky.swf` | `skyMap/skyMap028.swf` |
+| Terrestrial | `tc_flat.swf` | `mapExplorer/mapExplorer010.swf` |
+| Terrestrial | `tc_globe.swf` | `longLatDemo/longLatDemo014.swf` |
+| Celestial | `cec_flat.swf` | `simpleFlatSkyMap/simpleFlatSkyMap007.swf` |
+| Celestial | `cec_sky.swf` | `skyMap/skyMap028.swf` |
 | Seasons | `seasons_ecliptic.swf` | `eclipticSimulator/eclipticSimulator025.swf` |
 
-`npm run decompile` extracts the ActionScript for all five (see `scripts/decompile-flash.ts`).
-Control inventories transcribed from the decompiled `onReset` handlers live in
-`doc/naap-control-inventory.md`.
+`npm run decompile` extracts ActionScript (see `scripts/decompile-flash.ts`).
 
-## Model Components
+## Model components
 
-- **TerrestrialModel** — `latitudeProperty`, `longitudeProperty`, `referenceCirclesVisibleProperty`.
-- **CelestialModel** — `starRaProperty`, `starDecProperty`, and grid/equator/ecliptic/constellation
-  visibility toggles.
-- **SeasonsModel** — canonical state is `sunEclipticLongitudeProperty` (0° = March equinox); the Sun's
-  declination, right ascension, noon altitude, day-of-year, and month/day are `DerivedProperty`s over it
-  (and `latitudeProperty`), computed with `SunPosition.ts`. A composed `TimeModel` drives play/pause;
-  `step(dt)` advances λ☉ while playing.
+### TerrestrialModel
 
-The seasons physics (`src/common/SunPosition.ts`, unit-tested in `tests/SunPosition.test.ts`):
-`sin δ☉ = sin ε · sin λ☉`, `α☉ = atan2(sin λ☉ · cos ε, cos λ☉)`, `h = 90° − |φ − δ☉|`, and a circular
-orbit `λ☉ = 360° · (dayOfYear − MARCH_EQUINOX_DAY) / DAYS_PER_YEAR` with `MARCH_EQUINOX_DAY = 79.25`,
-`ε = 23.4°`, `DAYS_PER_YEAR = 365.24`.
+| Property | Role |
+|---|---|
+| `latitudeProperty`, `longitudeProperty` | Observer location |
+| `mapCenterLongitudeProperty` | Flat map pan |
+| `coordinateFormatProperty` | Decimal vs sexagesimal readouts |
+| `primeMeridianVisibleProperty`, `meridiansVisibleProperty`, `parallelsVisibleProperty`, `dateLineVisibleProperty`, `geographicalLinesVisibleProperty`, `labelsVisibleProperty`, `showCitiesProperty` | Granular map/globe overlays |
 
-## View Components
+`step()` is a no-op. `reset()` restores Lincoln defaults and overlay toggles.
 
-Each `*ScreenView.ts` lays out its nodes in `layoutBounds`, fills the background from
-`BasicCoordinatesAndSeasonsColors`, wires a `ResetAllButton` to `model.reset()`, and sets an explicit
-`pdomOrder`. Control panels use `BasicCoordinatesAndSeasonsPanel` so projector-mode switching is
-automatic. Sphere scenes follow the RotatingSky paint order: `backLayer` (dashed far side) → opaque
-fills → `frontLayer` (solid near side) → stars/markers last.
+### CelestialModel
 
-### Color Scheme
+| Property | Role |
+|---|---|
+| `starRaProperty`, `starDecProperty` | Guide star position |
+| `raOffsetProperty` | Flat sky map RA pan |
+| `coordinateFormatProperty` | Readout format |
+| `gridVisibleProperty`, `equatorVisibleProperty`, `eclipticVisibleProperty`, `galacticEquatorVisibleProperty`, `equinoxesAndSolsticesVisibleProperty`, `celestialPolesVisibleProperty`, `constellationsVisibleProperty` | Overlays |
 
-`BasicCoordinatesAndSeasonsColors.ts` defines `ProfileColorProperty` instances for "default" (dark) and
-"projector" (light) profiles. SceneryStack switches profiles automatically when the user toggles
-Projector Mode in Preferences.
+`step()` is a no-op.
 
-### Accessibility
+### SeasonsModel
 
-Every interactive node has an `accessibleName`; each screen's `*ScreenSummaryContent` exposes a live
-`currentDetailsContent` `PatternStringProperty` over model Properties. Keyboard help is built from
-scenerystack's localized sections (`MoveDraggableItems`, `SliderControls`, `TimeControls`,
-`BasicActions`) matching each screen's real drag/slider/time interactions.
+Canonical state is `sunEclipticLongitudeProperty` (0° = March equinox). Derived quantities (`sunDeclinationProperty`, `sunRightAscensionProperty`, `noonSunAltitudeProperty`, `dayOfYearProperty`, month/day strings) use `SunPosition.ts`.
 
-## Preferences
+| Property | Role |
+|---|---|
+| `latitudeProperty` | Observer latitude |
+| `viewModeProperty` | Orbit vs celestial-sphere stage |
+| `earthViewModeProperty` | Side vs sun-facing close-up |
+| `sunbeamModeProperty` | Angle vs spread diagram |
+| `subsolarPointVisibleProperty`, label toggles | Diagram overlays |
+| `timer: TimeModel` | Play/pause; `step(dt)` advances λ☉ while playing |
 
-The one sim preference is **Earth Map Detail** (`earthMapResolution`: `low` = original NAAP outline,
-`high` = Natural Earth polygons), initialized from the `?earthMapResolution=` query parameter and
-threaded from `main.ts` into the Terrestrial screen's globe and flat map.
+## View components (per screen)
 
-## Known gaps / TODOs
+**Terrestrial:** `TerrestrialMapNode`, `GlobeObserverDragNode`, `TerrestrialScreenView` control panel; `CityData.ts`, `DateLineData.ts`.
 
-- `public/icons/icon.svg` is still the template icon — replace and run `npm run icons` for the
-  navigation-bar/PWA icon (the in-sim home-screen icons are programmatic and done).
-- No `dispose()` calls yet — add them if any Node gains listeners that outlive it.
+**Celestial:** `FlatSkyMapNode`, `StarFieldNode` + `BrightStarCatalog.ts`, `ZodiacConstellations.ts`.
+
+**Seasons:** `OrbitViewNode`, `SeasonsSphereNode`, `EarthCloseUpNode`, `EarthFromSunNode`, `SunlightAngleNode`, `SunbeamSpreadNode`, `MonthSelectorNode`, `SunMarkerNode`, `seasonsDate.ts`.
+
+Sphere scenes follow RotatingSky paint order: `backLayer` (dashed far side) → opaque fills → `frontLayer` (solid near side) → stars/markers last.
+
+## Key design decisions
+
+- **One shared guide star** per Celestial screen across flat map and sphere; NAAP used different defaults per view — port chose compromise values.
+- **Canonical seasons state = λ☉**, not raw day-of-year index.
+- **Granular terrestrial toggles** instead of a single "reference circles" flag.
+- **`DEFAULT_EARTH_MAP_RESOLUTION = "high"`** (Natural Earth); overridable via `?earthMapResolution=` and Preferences → Simulation.
+- **`SkyCoordinates` alt-az API** is tested and reserved for horizon views in sibling sims; unused here.
+
+## Common components
+
+- `BasicCoordinatesAndSeasonsPanel` — pre-themed panel; projector-mode switching is automatic.
+- `BasicCoordinatesAndSeasonsButtonOptions` / `ControlOptions` — flat button/combo/checkbox bundles.
+- `TimeModel` — composed into `SeasonsModel` only.
+
+## Disposal
+
+`TimeModel.dispose()` and `SkyProjection.dispose()` exist. Screen-lifetime views and models do not call them today. `tests/memory-leak.test.ts` covers `TimeModel` only.
+
+## Testing
+
+`npm test` (vitest):
+
+| File | Covers |
+|---|---|
+| `SunPosition.test.ts` | Cardinal δ☉/α☉, noon altitude, day↔λ☉, calendar |
+| `SkyCoordinates.test.ts` | RA/Dec vectors, alt-az round-trips |
+| `skyGraphics.test.ts` | Projection helpers |
+| `formatAngles.test.ts` | DMS formatting |
+| `TerrestrialModel.test.ts`, `CelestialModel.test.ts`, `SeasonsModel.test.ts` | Defaults, reset, stepping |
+| `TimeModel.test.ts` | Clock behavior |
+| `memory-leak.test.ts` | `TimeModel` dispose + GC |
+
+## Multi-screen simulations
+
+Three independent screen models — no shared root state. See [multi-screen.md](./multi-screen.md) for the fleet pattern.

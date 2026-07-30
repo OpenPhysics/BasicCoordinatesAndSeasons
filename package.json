@@ -3,19 +3,23 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "A SceneryStack single-screen simulation template.",
+  "description": "SceneryStack port of the NAAP 'Basic Coordinates and Seasons' lab. Explore terrestrial and celestial coordinates and how Earth's axial tilt produces the seasons across three screens.",
   "license": "AGPL-3.0-or-later",
   "repository": {
     "type": "git",
-    "url": "https://github.com/OpenPhysics/TemplateSingleSim.git"
+    "url": "https://github.com/OpenPhysics/BasicCoordinatesAndSeasons.git"
   },
   "keywords": [
-    "template",
+    "basic-coordinates-and-seasons",
     "simulation",
     "SceneryStack",
     "interactive",
     "physics",
     "education",
+    "astronomy",
+    "coordinates",
+    "seasons",
+    "celestial sphere",
     "pwa"
   ],
   "scripts": {

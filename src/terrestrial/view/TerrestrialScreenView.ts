@@ -17,6 +17,7 @@ import {
   type TReadOnlyProperty,
 } from "scenerystack/axon";
 import { Vector2 } from "scenerystack/dot";
+import { optionize } from "scenerystack/phet-core";
 import { HBox, Node, Rectangle, Text, VBox } from "scenerystack/scenery";
 import { PhetFont, ResetAllButton } from "scenerystack/scenery-phet";
 import type { ScreenViewOptions } from "scenerystack/sim";
@@ -59,21 +60,26 @@ const MAP_HEIGHT = 250;
 const GLOBE_RADIUS = 180;
 const GLOBE_ROTATE_STEP_RADIANS = 0.3;
 
-type TerrestrialScreenViewOptions = ScreenViewOptions & {
+type TerrestrialScreenViewSelfOptions = {
   earthMapResolutionProperty: TReadOnlyProperty<EarthMapResolution>;
 };
+
+export type TerrestrialScreenViewOptions = TerrestrialScreenViewSelfOptions & ScreenViewOptions;
 
 export class TerrestrialScreenView extends ScreenView {
   private panAnimation: Animation | null = null;
   private globeRotateAnimation: Animation | null = null;
   private readonly projection: SkyProjection;
 
-  public constructor(model: TerrestrialModel, options: TerrestrialScreenViewOptions) {
-    const { earthMapResolutionProperty, ...screenViewOptions } = options;
-    super({
-      screenSummaryContent: new TerrestrialScreenSummaryContent(model),
-      ...screenViewOptions,
-    });
+  public constructor(model: TerrestrialModel, providedOptions: TerrestrialScreenViewOptions) {
+    const options = optionize<TerrestrialScreenViewOptions, TerrestrialScreenViewSelfOptions, ScreenViewOptions>()(
+      {
+        screenSummaryContent: new TerrestrialScreenSummaryContent(model),
+      },
+      providedOptions,
+    );
+    const { earthMapResolutionProperty } = options;
+    super(options);
 
     const controls = StringManager.getInstance().getControls();
     const a11y = StringManager.getInstance().getTerrestrialA11yStrings();

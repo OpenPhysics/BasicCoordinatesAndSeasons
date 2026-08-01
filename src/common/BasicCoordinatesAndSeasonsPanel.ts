@@ -25,21 +25,26 @@
  *   const panel = new BasicCoordinatesAndSeasonsPanel(content, { fill: "transparent" });
  */
 
+import { type EmptySelfOptions, optionize } from "scenerystack/phet-core";
 import type { Node } from "scenerystack/scenery";
-import type { PanelOptions } from "scenerystack/sun";
-import { Panel } from "scenerystack/sun";
+import { Panel, type PanelOptions } from "scenerystack/sun";
 import BasicCoordinatesAndSeasonsColors from "../BasicCoordinatesAndSeasonsColors.js";
 import { PANEL_CORNER_RADIUS } from "../BasicCoordinatesAndSeasonsConstants.js";
 
+export type BasicCoordinatesAndSeasonsPanelOptions = PanelOptions;
+
 export class BasicCoordinatesAndSeasonsPanel extends Panel {
-  public constructor(content: Node, providedOptions?: PanelOptions) {
-    super(content, {
-      fill: BasicCoordinatesAndSeasonsColors.panelBackgroundColorProperty,
-      stroke: BasicCoordinatesAndSeasonsColors.panelBorderColorProperty,
-      cornerRadius: PANEL_CORNER_RADIUS,
-      xMargin: 12,
-      yMargin: 10,
-      ...providedOptions,
-    });
+  public constructor(content: Node, providedOptions?: BasicCoordinatesAndSeasonsPanelOptions) {
+    const options = optionize<BasicCoordinatesAndSeasonsPanelOptions, EmptySelfOptions, PanelOptions>()(
+      {
+        fill: BasicCoordinatesAndSeasonsColors.panelBackgroundColorProperty,
+        stroke: BasicCoordinatesAndSeasonsColors.panelBorderColorProperty,
+        cornerRadius: PANEL_CORNER_RADIUS,
+        xMargin: 12,
+        yMargin: 10,
+      },
+      providedOptions,
+    );
+    super(content, options);
   }
 }

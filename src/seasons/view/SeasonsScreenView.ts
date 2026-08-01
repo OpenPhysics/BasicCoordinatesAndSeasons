@@ -23,10 +23,10 @@ import {
 } from "scenerystack/axon";
 import { toFixed, Vector2 } from "scenerystack/dot";
 import { Shape } from "scenerystack/kite";
+import { type EmptySelfOptions, optionize } from "scenerystack/phet-core";
 import { HBox, Node, Rectangle, Text, type TPaint, VBox } from "scenerystack/scenery";
 import { NumberControl, PhetFont, ResetAllButton, TimeControlNode } from "scenerystack/scenery-phet";
-import type { ScreenViewOptions } from "scenerystack/sim";
-import { ScreenView } from "scenerystack/sim";
+import { ScreenView, type ScreenViewOptions } from "scenerystack/sim";
 import { Checkbox, VerticalAquaRadioButtonGroup } from "scenerystack/sun";
 import BasicCoordinatesAndSeasonsColors from "../../BasicCoordinatesAndSeasonsColors.js";
 import { CONTROL_FONT_SIZE, SCREEN_VIEW_MARGIN } from "../../BasicCoordinatesAndSeasonsConstants.js";
@@ -56,12 +56,17 @@ const LEFT_STAGE = { x: 12, y: 8, w: 576, h: 470 };
 const EARTH_STAGE = { x: 596, y: 8, w: 416, h: 232 };
 const SUNBEAM_STAGE = { x: 596, y: 248, w: 416, h: 230 };
 
+export type SeasonsScreenViewOptions = ScreenViewOptions;
+
 export class SeasonsScreenView extends ScreenView {
-  public constructor(model: SeasonsModel, options?: ScreenViewOptions) {
-    super({
-      screenSummaryContent: new SeasonsScreenSummaryContent(model),
-      ...options,
-    });
+  public constructor(model: SeasonsModel, providedOptions?: SeasonsScreenViewOptions) {
+    const options = optionize<SeasonsScreenViewOptions, EmptySelfOptions, ScreenViewOptions>()(
+      {
+        screenSummaryContent: new SeasonsScreenSummaryContent(model),
+      },
+      providedOptions,
+    );
+    super(options);
 
     const controls = StringManager.getInstance().getControls();
     const a11y = StringManager.getInstance().getSeasonsA11yStrings();

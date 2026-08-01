@@ -10,23 +10,29 @@
  */
 
 import { Shape } from "scenerystack/kite";
+import { optionize } from "scenerystack/phet-core";
 import { Circle, Node, type NodeOptions, Path, type TPaint } from "scenerystack/scenery";
 import BasicCoordinatesAndSeasonsColors from "../../BasicCoordinatesAndSeasonsColors.js";
 
-export type StickFigureNodeOptions = {
+type StickFigureNodeSelfOptions = {
   /** Overall figure height in view units (feet to top of head). Default 20. */
   height?: number;
   /** Stroke/fill colour of the figure. Default the shared observer colour. */
   color?: TPaint;
-} & NodeOptions;
+};
+
+export type StickFigureNodeOptions = StickFigureNodeSelfOptions & NodeOptions;
 
 export class StickFigureNode extends Node {
   public constructor(providedOptions?: StickFigureNodeOptions) {
-    const {
-      height = 20,
-      color = BasicCoordinatesAndSeasonsColors.observerColorProperty,
-      ...nodeOptions
-    } = providedOptions ?? {};
+    const options = optionize<StickFigureNodeOptions, StickFigureNodeSelfOptions, NodeOptions>()(
+      {
+        height: 20,
+        color: BasicCoordinatesAndSeasonsColors.observerColorProperty,
+      },
+      providedOptions,
+    );
+    const { height, color, ...nodeOptions } = options;
 
     // Proportions as fractions of the total height, measured up (−y) from the feet at y = 0.
     const hipY = -0.42 * height;

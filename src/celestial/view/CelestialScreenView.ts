@@ -12,10 +12,10 @@
 import type { TReadOnlyProperty } from "scenerystack/axon";
 import { BooleanProperty, DerivedProperty, PatternStringProperty } from "scenerystack/axon";
 import { toFixed, Vector2 } from "scenerystack/dot";
+import { type EmptySelfOptions, optionize } from "scenerystack/phet-core";
 import { HBox, Node, Rectangle, Text, VBox } from "scenerystack/scenery";
 import { PhetFont, ResetAllButton } from "scenerystack/scenery-phet";
-import type { ScreenViewOptions } from "scenerystack/sim";
-import { ScreenView } from "scenerystack/sim";
+import { ScreenView, type ScreenViewOptions } from "scenerystack/sim";
 import { ArrowButton, Checkbox, VerticalAquaRadioButtonGroup } from "scenerystack/sun";
 import { Animation, Easing } from "scenerystack/twixt";
 import BasicCoordinatesAndSeasonsColors from "../../BasicCoordinatesAndSeasonsColors.js";
@@ -49,16 +49,21 @@ const SPHERE_ROTATE_STEP_RADIANS = 0.3;
 /** Hours of RA shift per button press. */
 const RA_SHIFT_STEP_HOURS = 3;
 
+export type CelestialScreenViewOptions = ScreenViewOptions;
+
 export class CelestialScreenView extends ScreenView {
   private shiftMapAnimation: Animation | null = null;
   private sphereRotateAnimation: Animation | null = null;
   private readonly projection: SkyProjection;
 
-  public constructor(model: CelestialModel, options?: ScreenViewOptions) {
-    super({
-      screenSummaryContent: new CelestialScreenSummaryContent(model),
-      ...options,
-    });
+  public constructor(model: CelestialModel, providedOptions?: CelestialScreenViewOptions) {
+    const options = optionize<CelestialScreenViewOptions, EmptySelfOptions, ScreenViewOptions>()(
+      {
+        screenSummaryContent: new CelestialScreenSummaryContent(model),
+      },
+      providedOptions,
+    );
+    super(options);
 
     const controls = StringManager.getInstance().getControls();
     const a11y = StringManager.getInstance().getCelestialA11yStrings();

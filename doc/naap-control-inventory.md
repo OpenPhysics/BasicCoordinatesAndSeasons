@@ -4,8 +4,8 @@ Source of truth for the UI/physics of the five NAAP Flash explorers being ported
 **Basic Coordinates and Seasons**. Compiled in Phase 0 (Steps 0.3–0.4 of the porting plan)
 from the decompiled ActionScript under `NAAP/decompiled/<name>/scripts/` (see
 `npm run decompile`), the poster JPEGs under
-`NAAP/naap-air-app/files/motion1/animations/`, and the student guide
-`NAAP/astroUNL/naap/motion1/naap_motion1_sg.pdf` + lab HTML pages.
+`../Baseline/Astronomy/naap-air-app/files/motion1/animations/`, and the student guide
+`../Baseline/Astronomy/astroUNL/naap/motion1/naap_motion1_sg.pdf` + lab HTML pages.
 
 Every control default/range/formula below is cited to the exact `.as` file (and usually
 line) it came from. Where the poster and the code disagree, **the decompiled code is
@@ -203,7 +203,7 @@ Surface coordinate system: map is **700 px wide × 350 px tall**, x∈[0,700], y
 - `NAAP/decompiled/mapExplorer010/scripts/frame_1/PlaceObject2_117_FPushButtonSymbol_7/CLIPACTIONRECORD on(initialize).as` — "open Google Maps" button.
 - `NAAP/decompiled/mapExplorer010/scripts/frame_1/PlaceObject2_117_FPushButtonSymbol_25/CLIPACTIONRECORD on(initialize).as` — shift-left arrow button.
 - `NAAP/decompiled/mapExplorer010/scripts/frame_1/PlaceObject2_117_FPushButtonSymbol_32/CLIPACTIONRECORD on(initialize).as` — shift-right arrow button.
-- Poster reference: `NAAP/naap-air-app/files/motion1/animations/tc_flat.jpg`.
+- Poster reference: `../Baseline/Astronomy/naap-air-app/files/motion1/animations/tc_flat.jpg`.
 
 ---
 
@@ -290,7 +290,7 @@ Two live readouts under the "point location" heading (`DefineSprite_130/frame_1/
 - `NAAP/decompiled/longLatDemo014/scripts/%3Cdefault package%3E/3 CS Geometry.as` (`doA`, `parsePointInput`, `WtoSz`, `StoMH`)
 - `NAAP/decompiled/longLatDemo014/scripts/%3Cdefault package%3E/4 CS Mouse.as` (`getMouseAltAz`, drag behaviors)
 - `NAAP/decompiled/longLatDemo014/scripts/%3Cdefault package%3E/City Dot.as`, `.../City Label.as` (city markers/labels)
-- Poster: `NAAP/naap-air-app/files/motion1/animations/tc_globe.jpg`
+- Poster: `../Baseline/Astronomy/naap-air-app/files/motion1/animations/tc_globe.jpg`
 
 ---
 
@@ -366,7 +366,7 @@ Map is 700 px wide (24 h) × 350 px tall (180°), y∈[−175,+175], x∈[0,700]
 - `NAAP/decompiled/simpleFlatSkyMap007/scripts/frame_1/PlaceObject2_124_FCheckBoxSymbol_{7,13,19,25,31}/CLIPACTIONRECORD on(initialize).as` (checkbox labels/defaults)
 - `NAAP/decompiled/simpleFlatSkyMap007/scripts/frame_1/PlaceObject2_118_FRadioButtonSymbol_{59,65}/CLIPACTIONRECORD on(initialize).as` (decimal/sexagesimal radios)
 - `NAAP/decompiled/simpleFlatSkyMap007/scripts/frame_1/PlaceObject2_121_FPushButtonSymbol_{44,51}/CLIPACTIONRECORD on(initialize).as` (shift-map buttons)
-- `NAAP/naap-air-app/files/motion1/animations/cec_flat.jpg` (poster; axis directions, Dec 30° spacing)
+- `../Baseline/Astronomy/naap-air-app/files/motion1/animations/cec_flat.jpg` (poster; axis directions, Dec 30° spacing)
 
 ---
 
@@ -455,7 +455,7 @@ Engine is the shared RotatingSky `CelestialSphere` family (`CelestialSphere.as` 
 - `NAAP/decompiled/skyMap028/scripts/DefineSprite_134/frame_1/PlaceObject2_117_FCheckBoxSymbol_{20,26,32,38,44,50}/CLIPACTIONRECORD on(initialize).as` — 6 checkbox labels + `initialValue=false` + changeHandlers.
 - `NAAP/decompiled/skyMap028/scripts/DefineSprite_134/frame_1/PlaceObject2_120_FRadioButtonSymbol_{3,9}/…` — decimal (default) / sexagesimal radios, group `formatGroup`.
 - `NAAP/decompiled/skyMap028/scripts/%3Cdefault package%3E/FCheckBoxSymbol.as`, `FRadioButtonSymbol.as`, `toFixed.as` — UI component + polyfill classes.
-- Poster: `NAAP/naap-air-app/files/motion1/animations/cec_sky.jpg`.
+- Poster: `../Baseline/Astronomy/naap-air-app/files/motion1/animations/cec_sky.jpg`.
 
 ---
 
@@ -578,7 +578,7 @@ daySlider.value = ((Math.round(daysSinceVE) - 286) % 365 + 365) % 365;
 - `%3Cdefault package%3E/CelestialSphere.as`, `2 CS Getter Setter.as`, `3 CS Geometry.as` — projection engine (`setLatitude` as obliquity, `pointToHorizon`, `CtoW`, `doM`/`doA`/`doB`).
 - `%3Cdefault package%3E/GlobeComponent.as` — Earth globe, `setSunDirection`/`updateShading` (terminator), axis lines (N red / S blue), fills.
 - `%3Cdefault package%3E/CS Label.as` — celestial-sphere text-label class.
-- Posters: `NAAP/naap-air-app/files/motion1/animations/seasons_ecliptic.jpg` and `seasons_ecliptic_300.jpg`.
+- Posters: `../Baseline/Astronomy/naap-air-app/files/motion1/animations/seasons_ecliptic.jpg` and `seasons_ecliptic_300.jpg`.
 
 ---
 

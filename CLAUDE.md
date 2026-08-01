@@ -80,6 +80,6 @@ npm run lint && npm run check && npm run build && npm test
 
 ## Development notes
 
-- **`npm run decompile`** extracts NAAP Flash ActionScript via JPEXS FFDec into gitignored `NAAP/decompiled/` — read-only reference; transcribe maths into typed TS in `src/`. Sources: `../Baseline/Astronomy/flash-animations`.
+- **`npm run decompile`** extracts NAAP Flash ActionScript via JPEXS FFDec from `../Baseline/Astronomy/flash-animations` into gitignored `NAAP/decompiled/`; transcribe maths into typed TS in `src/`.
 - Screens are independent; see [doc/multi-screen.md](doc/multi-screen.md) for the fleet multi-screen pattern.
 - After `npm run build`, the sim is installable offline via Workbox (`dist/manifest.webmanifest`).

@@ -271,7 +271,12 @@ export class EarthFromSunNode extends Node {
       const v = projection.unproject(local);
       model.latitudeProperty.value = clampLatitude(radToDeg(Math.asin(Math.max(-1, Math.min(1, v.z)))));
     };
-    latitudeCircle.addInputListener(new DragListener({ drag: (event) => setLatitudeFromPoint(event.pointer.point) }));
+    latitudeCircle.addInputListener(
+      // Pointer-only: the arrow keys already nudge the latitude through the ARROW_KEYS listener
+      // below, which is what BasicCoordinatesAndSeasonsHotkeyData documents in the keyboard help.
+      // Adding a RichDragListener here would bind the same keys twice.
+      new DragListener({ drag: (event) => setLatitudeFromPoint(event.pointer.point) }),
+    );
     latitudeCircle.addInputListener(
       new KeyboardListener({
         keys: [...BasicCoordinatesAndSeasonsHotkeyData.ARROW_KEYS],

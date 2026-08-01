@@ -246,7 +246,12 @@ export class EarthCloseUpNode extends Node {
       const betaDeg = radToDeg(Math.atan2(-local.y, local.x));
       model.latitudeProperty.value = clampLatitude(model.sunDeclinationProperty.value + betaDeg);
     };
-    observer.addInputListener(new DragListener({ drag: (event) => setLatitudeFromPoint(event.pointer.point) }));
+    observer.addInputListener(
+      // Pointer-only: the arrow keys already nudge the latitude through the ARROW_KEYS listener
+      // below, which is what BasicCoordinatesAndSeasonsHotkeyData documents in the keyboard help.
+      // Adding a RichDragListener here would bind the same keys twice.
+      new DragListener({ drag: (event) => setLatitudeFromPoint(event.pointer.point) }),
+    );
     observer.addInputListener(
       new KeyboardListener({
         keys: [...BasicCoordinatesAndSeasonsHotkeyData.ARROW_KEYS],

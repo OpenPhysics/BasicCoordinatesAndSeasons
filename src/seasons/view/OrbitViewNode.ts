@@ -182,7 +182,12 @@ export class OrbitViewNode extends Node {
       model.sunEclipticLongitudeProperty.value = normalizeDegrees(phiDeg - 180);
     };
 
-    earth.addInputListener(new DragListener({ drag: (event) => setLongitudeFromPoint(event.pointer.point) }));
+    earth.addInputListener(
+      // Pointer-only: the arrow keys already step the date through the ARROW_KEYS listener below,
+      // which is what BasicCoordinatesAndSeasonsHotkeyData documents in the keyboard help. Adding
+      // a RichDragListener here would bind the same keys twice.
+      new DragListener({ drag: (event) => setLongitudeFromPoint(event.pointer.point) }),
+    );
     earth.addInputListener(
       new KeyboardListener({
         keys: [...BasicCoordinatesAndSeasonsHotkeyData.ARROW_KEYS],

@@ -468,6 +468,9 @@ export class FlatEarthMapNode extends Node {
       latitudeProperty.value = LATITUDE_RANGE.constrainValue(90 - (localY / height) * 180);
     };
     cursor.addInputListener(
+      // Pointer-only: the arrow keys already nudge the observer through the ARROW_KEYS listener
+      // below, which is what BasicCoordinatesAndSeasonsHotkeyData documents in the keyboard help.
+      // Adding a RichDragListener here would bind the same keys twice.
       new DragListener({
         drag: (event) => {
           const local = this.globalToLocalPoint(event.pointer.point);

@@ -100,6 +100,9 @@ export class GlobeObserverDragNode extends Node {
     // pointer never moves and the marker can follow the cursor absolutely; unproject
     // clamps off-disc points to the limb, so no null-check is needed.
     markerTarget.addInputListener(
+      // Pointer-only: the arrow keys already nudge the observer through the ARROW_KEYS listener
+      // below, which is what BasicCoordinatesAndSeasonsHotkeyData documents in the keyboard help.
+      // Adding a RichDragListener here would bind the same keys twice.
       new DragListener({
         drag: (event) => {
           const v = projection.unproject(this.globalToParentPoint(event.pointer.point));

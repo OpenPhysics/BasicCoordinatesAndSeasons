@@ -128,6 +128,9 @@ export class MonthSelectorNode extends Node {
       const day = Math.max(1, Math.min(DAYS_PER_YEAR, (x / STRIP_WIDTH) * DAYS_PER_YEAR));
       model.sunEclipticLongitudeProperty.value = eclipticLongitudeForDayOfYear(day);
     };
+    // Pointer-only, and one listener per Node: the arrow keys already nudge the date through the
+    // ARROW_KEYS listener on the marker below (the binding the keyboard help documents), and a
+    // DragListener carries per-press state that cannot be shared between two Nodes.
     hitStrip.addInputListener(new DragListener({ drag: (event) => setDateFromPoint(event.pointer.point) }));
     marker.addInputListener(new DragListener({ drag: (event) => setDateFromPoint(event.pointer.point) }));
 

@@ -50,6 +50,10 @@ export const attachSkyCameraInteraction = <T extends Node>(
   let lastPoint: Vector2 | null = null;
   let dragMode: "simple" | "zenith" = "simple";
 
+  // Pointer-only. Both plain and Alt+arrow rotation stay on the KeyboardListener below so every
+  // binding keeps coming from BasicCoordinatesAndSeasonsHotkeyData — which is what the keyboard
+  // help dialog renders. A RichDragListener would claim the plain arrows without a HotkeyData
+  // entry, leaving ROTATE_SKY_KEYS documented but unbound.
   target.addInputListener(
     new DragListener({
       start: (event) => {

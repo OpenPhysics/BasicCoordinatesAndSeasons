@@ -91,6 +91,9 @@ export class CoordinateGuideNode extends Node {
     // Dragging the guide star across the sphere updates its RA/Dec directly; the
     // multilink below repositions the dot, so the listener must not translate it.
     starDot.addInputListener(
+      // Pointer-only: the arrow keys already nudge RA/Dec through the ARROW_KEYS listener below,
+      // which is what BasicCoordinatesAndSeasonsHotkeyData documents in the keyboard help. Adding
+      // a RichDragListener here would bind the same keys twice and both handlers would fire.
       new DragListener({
         drag: (event) => {
           const point = this.frontLayer.globalToParentPoint(event.pointer.point);

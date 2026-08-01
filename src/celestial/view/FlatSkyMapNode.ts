@@ -384,6 +384,9 @@ export class FlatSkyMapNode extends Node {
     // Convert the pointer's viewport position back through the current pan, so
     // dragging tracks the star under the cursor regardless of how the map is panned.
     this.starDot.addInputListener(
+      // Pointer-only: the arrow keys already nudge RA/Dec through the ARROW_KEYS listener below,
+      // which is what BasicCoordinatesAndSeasonsHotkeyData documents in the keyboard help. Adding
+      // a RichDragListener here would bind the same keys twice and both handlers would fire.
       new DragListener({
         drag: (event) => {
           const local = this.globalToLocalPoint(event.pointer.point);

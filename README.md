@@ -24,9 +24,21 @@ Built with Vite 8, TypeScript 7, and Biome 2.
 - Git hooks for Biome pre-commit checks
 - Shared GitHub Actions CI via `OpenPhysics/Baton`
 
-The original lab (astroUNL `naap/motion1`) and its Flash sources live in the git-ignored `NAAP/`
-directory. `npm run decompile` extracts readable ActionScript from the five published simulators into
-`NAAP/decompiled/` via JPEXS FFDec (requires Java; one-time `npm run decompile -- --setup`).
+### NAAP reference sources
+
+Upstream Flash / AIR / React NAAP sources live in the sibling
+[`Baseline`](https://github.com/OpenPhysics/Baseline) repo under `Astronomy/`
+(see `baselines.json`). Clone Baseline with the fleet bootstrap, then:
+
+```bash
+(cd ../Baseline && ./scripts/fetch-baselines.sh)
+```
+
+`npm run decompile` reads `.swf` files from
+`../Baseline/Astronomy/flash-animations` and writes ActionScript into the
+sim-local gitignored `NAAP/decompiled/` (requires Java; one-time
+`npm run decompile -- --setup`).
+
 
 ## Quick Start
 

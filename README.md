@@ -1,5 +1,7 @@
 # Basic Coordinates and Seasons
 
+[![CI](https://github.com/OpenPhysics/BasicCoordinatesAndSeasons/actions/workflows/ci.yml/badge.svg)](https://github.com/OpenPhysics/BasicCoordinatesAndSeasons/actions/workflows/ci.yml)
+
 A three-screen [SceneryStack](https://scenerystack.org/) port of the NAAP **Basic Coordinates and Seasons**
 lab: **Terrestrial Coordinates**, **Celestial Coordinates**, and **Seasons**.
 Built with Vite 8, TypeScript 7, and Biome 2.

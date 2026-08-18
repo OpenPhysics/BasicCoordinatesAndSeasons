@@ -60,6 +60,37 @@ const MAP_HEIGHT = 250;
 const GLOBE_RADIUS = 180;
 const GLOBE_ROTATE_STEP_RADIANS = 0.3;
 
+type FeaturePolicyQuery = {
+  allowsFeature: (feature: string) => boolean;
+};
+
+/**
+ * Whether `getCurrentPosition` can be called without a Chromium Permissions-Policy
+ * console.error (Playwright fuzz treats those as failures). Missing policy APIs are
+ * treated as allowed so capable browsers still get a prompt.
+ */
+const isGeolocationCallable = (): boolean => {
+  if (typeof navigator === "undefined" || !navigator.geolocation) {
+    return false;
+  }
+  if (typeof document === "undefined") {
+    return true;
+  }
+  const candidate = document as Document & {
+    permissionsPolicy?: FeaturePolicyQuery;
+    featurePolicy?: FeaturePolicyQuery;
+  };
+  const policy = candidate.permissionsPolicy ?? candidate.featurePolicy;
+  if (!policy || typeof policy.allowsFeature !== "function") {
+    return true;
+  }
+  try {
+    return policy.allowsFeature("geolocation");
+  } catch {
+    return false;
+  }
+};
+
 type TerrestrialScreenViewSelfOptions = {
   earthMapResolutionProperty: TReadOnlyProperty<EarthMapResolution>;
 };
@@ -345,17 +376,24 @@ export class TerrestrialScreenView extends ScreenView {
         maxWidth: 190,
       }),
       listener: () => {
+        if (!isGeolocationCallable()) {
+          return;
+        }
         useMyLocationButton.enabled = false;
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            model.latitudeProperty.value = position.coords.latitude;
-            model.longitudeProperty.value = position.coords.longitude;
-            useMyLocationButton.enabled = true;
-          },
-          () => {
-            useMyLocationButton.enabled = true;
-          },
-        );
+        try {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              model.latitudeProperty.value = position.coords.latitude;
+              model.longitudeProperty.value = position.coords.longitude;
+              useMyLocationButton.enabled = true;
+            },
+            () => {
+              useMyLocationButton.enabled = true;
+            },
+          );
+        } catch {
+          useMyLocationButton.enabled = true;
+        }
       },
       accessibleName: a11y.controls.useMyLocationStringProperty,
     });

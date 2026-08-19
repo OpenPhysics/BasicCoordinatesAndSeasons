@@ -345,6 +345,9 @@ export class TerrestrialScreenView extends ScreenView {
         maxWidth: 190,
       }),
       listener: () => {
+        if (!("geolocation" in navigator)) {
+          return;
+        }
         useMyLocationButton.enabled = false;
         navigator.geolocation.getCurrentPosition(
           (position) => {

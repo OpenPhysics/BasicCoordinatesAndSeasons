@@ -20,6 +20,8 @@ export default defineConfig({
     trace: "retain-on-failure",
     video: "retain-on-failure",
     screenshot: "only-on-failure",
+    geolocation: { latitude: 40.8, longitude: -74.0 },
+    permissions: ["geolocation"],
   },
   webServer: {
     command: "npm run start",

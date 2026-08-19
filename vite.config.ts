@@ -35,7 +35,7 @@ const securityHeaders: Record<string, string> = {
     "frame-ancestors 'none'",
   ].join("; "),
   "Referrer-Policy": "strict-origin-when-cross-origin",
-  "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=(self)",
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
 };

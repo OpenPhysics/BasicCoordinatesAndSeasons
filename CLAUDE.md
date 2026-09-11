@@ -1,6 +1,6 @@
 # CLAUDE.md — Basic Coordinates and Seasons
 
-Sim-specific context for AI assistants. General SceneryStack guidance: [OpenPhysics/.github/CLAUDE.md](https://github.com/OpenPhysics/.github/blob/main/CLAUDE.md).
+Sim-specific context for AI assistants. General SceneryStack guidance: [OpenLyceum/.github/CLAUDE.md](https://github.com/OpenLyceum/.github/blob/main/CLAUDE.md).
 
 ## Project
 
@@ -45,7 +45,7 @@ Three **independent** screen models — no shared root state. Terrestrial and Ce
 
 ## Accessibility
 
-Follows the shared [OpenPhysics accessibility convention](https://github.com/OpenPhysics/Baton/blob/main/ACCESSIBILITY.md).
+Follows the shared [OpenLyceum accessibility convention](https://github.com/OpenLyceum/Baton/blob/main/ACCESSIBILITY.md).
 Each screen registers its own `*ScreenSummaryContent` (live `currentDetailsContent` over model state) via the view's `screenSummaryContent` super-option, and orders the PDOM through a wrapper `Node`. A11y strings live under `a11y.terrestrial`, `a11y.celestial`, and `a11y.seasons` in each locale JSON, via `StringManager.getTerrestrialA11yStrings()` / `getCelestialA11yStrings()` / `getSeasonsA11yStrings()`.
 
 ## Testing
